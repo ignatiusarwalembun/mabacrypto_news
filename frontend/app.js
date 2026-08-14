@@ -1,4 +1,4 @@
-const API = window.APP_CONFIG?.API_BASE_URL || "http://localhost:5000/api";
+const API = window.APP_CONFIG?.API_BASE_URL || `http://${window.location.hostname || "localhost"}:5000/api`;
 
 const state = {
   view: "home",
