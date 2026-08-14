@@ -6,6 +6,8 @@ const state = {
   search: "",
   items: [],
   debounce: null,
+  startupPollTimer: null,
+  startupPollAttempts: 0,
 };
 
 const els = {
@@ -130,21 +132,44 @@ function buildQuery() {
   return params;
 }
 
-async function loadNews() {
+async function loadNews({ startupPoll = false } = {}) {
   updateSectionText();
-  els.resultCount.textContent = "Memuat berita…";
+  els.resultCount.textContent = startupPoll ? "Mengambil berita…" : "Memuat berita…";
   els.empty.hidden = true;
+
   try {
-    const response = await fetch(`${API}/news?${buildQuery().toString()}`);
+    const response = await fetch(`${API}/news?${buildQuery().toString()}`, {
+      cache: "no-store",
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
     const data = await response.json();
     state.items = data.items || [];
     updateHeader(data.stats || {});
     renderNews();
+
+    const refreshRunning = Boolean(data.refresh?.running);
+    const databaseEmpty = Number(data.stats?.total || 0) === 0;
+
+    clearTimeout(state.startupPollTimer);
+
+    if (databaseEmpty && refreshRunning && state.startupPollAttempts < 20) {
+      state.startupPollAttempts += 1;
+      els.resultCount.textContent = "Mengambil berita terbaru…";
+      els.empty.hidden = true;
+      state.startupPollTimer = setTimeout(
+        () => loadNews({ startupPoll: true }),
+        1500
+      );
+    } else {
+      state.startupPollAttempts = 0;
+    }
   } catch (error) {
+    clearTimeout(state.startupPollTimer);
+    state.startupPollAttempts = 0;
     state.items = [];
     renderNews();
-    showToast("Backend belum terhubung. Jalankan backend Flask dulu.");
+    showToast("Backend belum terhubung.");
     console.error(error);
   }
 }
@@ -181,6 +206,8 @@ async function toggleSave(id) {
 }
 
 async function refreshNews() {
+  clearTimeout(state.startupPollTimer);
+  state.startupPollAttempts = 0;
   els.refresh.classList.add("loading");
   try {
     const response = await fetch(`${API}/refresh`, { method: "POST" });
@@ -197,6 +224,8 @@ async function refreshNews() {
 }
 
 function setView(view) {
+  clearTimeout(state.startupPollTimer);
+  state.startupPollAttempts = 0;
   state.view = view;
   if (["investment", "technology", "crypto", "important", "saved"].includes(view)) {
     state.category = "all";
