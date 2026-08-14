@@ -1,5 +1,4 @@
-// Netlify replaces this file during deployment via build-config.js.
-// For local testing, put your backend URL here if needed.
+// Netlify serves API through same-origin /api.
 window.APP_CONFIG = {
-  API_BASE_URL: "http://localhost:5000/api"
+  API_BASE_URL: "/api"
 };
