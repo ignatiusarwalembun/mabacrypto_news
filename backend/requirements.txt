@@ -1,8 +1,9 @@
 Flask>=3.0,<4
 flask-cors>=4,<7
-feedparser>=6,<7
+feedparser>=6.0,<7
 requests>=2.31,<3
-python-dotenv>=1,<2
 APScheduler>=3.10,<4
-beautifulsoup4>=4.12,<5
-gunicorn>=23,<24
+deep-translator>=1.11,<2
+langdetect>=1.0,<2
+googlenewsdecoder==0.1.7
+gunicorn>=22,<24

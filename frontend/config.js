@@ -1,6 +1,4 @@
-// MabaCrypto News production API configuration.
-// Semua device menggunakan backend Railway yang sama secara otomatis.
-
-window.APP_CONFIG = {
-  API_BASE_URL: "https://mabacryptonews-production.up.railway.app/api"
-};
+window.APP_CONFIG = Object.freeze({
+  API_BASE_URL: "https://mabacryptonews-production.up.railway.app/api",
+  LOCAL_API_BASE_URL: "http://localhost:5000/api"
+});

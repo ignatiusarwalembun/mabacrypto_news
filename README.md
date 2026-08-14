@@ -1,226 +1,250 @@
-# MabaCrypto News Intelligence — V1.3 No-AI
+# MabaCrypto News
 
-Dashboard berita investasi, teknologi, blockchain, dan crypto dengan UI gold/white/black, dark/light mode, responsive mobile-desktop, saved news, auto refresh, serta importance scoring **100% lokal tanpa OpenAI atau API AI**.
-
-## Yang berubah di V1.3
-
-- OpenAI SDK dihapus total.
-- `OPENAI_API_KEY` dan `OPENAI_MODEL` tidak diperlukan lagi.
-- Importance scoring sekarang deterministic/rule-based di backend.
-- Ringkasan menggunakan snippet/feed sumber yang dibersihkan dan dipendekkan secara lokal.
-- Judul/snippet Inggris memakai kamus istilah lokal untuk istilah finance/tech/crypto umum. Kata yang tidak dikenal dipertahankan agar aplikasi tidak mengarang terjemahan.
-- Kategori Blockchain & Crypto tetap aktif penuh.
-- GitHub auto uploader `auto-upload-github.bat` tetap disertakan.
+MabaCrypto News adalah web aggregator berita untuk **Investment**, **Technology**, dan **Blockchain & Crypto** dengan frontend HTML/CSS/Vanilla JavaScript serta backend Flask + SQLite.
 
 ## Struktur
 
 ```text
-mabacrypto-news/
+mabacrypto_news/
 ├── frontend/
 │   ├── index.html
 │   ├── styles.css
 │   ├── app.js
-│   ├── config.js
-│   └── netlify.toml
+│   └── config.js
 ├── backend/
 │   ├── app.py
+│   ├── database.py
+│   ├── requirements.txt
+│   ├── Procfile
 │   ├── routes/
 │   ├── services/
-│   ├── data/
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── Procfile
+│   └── data/
+├── railway.toml
+├── netlify.toml
 ├── auto-upload-github.bat
-├── start-all.bat
-├── start-backend.bat
-└── start-frontend.bat
+├── .gitignore
+└── README.md
 ```
 
-## Sumber berita
+## Environment backend
 
-Collector memakai Google News RSS search sebagai discovery layer:
+| Variable | Default | Production recommendation |
+|---|---|---|
+| `PORT` | `5000` | Railway mengisi otomatis |
+| `DATABASE_PATH` | `backend/data/news.db` | `/app/data/news.db` dengan Railway Volume di `/app/data` |
+| `NEWS_REFRESH_MINUTES` | `20` | `20` |
+| `CORS_ORIGINS` | `*` | Domain Netlify, atau `*` selama pengujian |
+| `DISABLE_SCHEDULER` | `0` | `0` |
+| `LOG_LEVEL` | `INFO` | `INFO` |
 
-- Bloomberg — query dibatasi `site:bloomberg.com`
-- Kontan — query dibatasi `site:kontan.co.id`
-- Google News — query umum investasi, teknologi, blockchain, dan crypto
+---
 
-Aplikasi menyimpan headline, snippet/feed, metadata, kategori, importance score, dan link sumber asli. Aplikasi tidak mencoba membuka atau menyalin isi paywall Bloomberg.
+# A. TEST LOCAL
 
-## Kategori
+### 1. Jalankan backend
 
-- Investasi
-- Teknologi
-- Blockchain & Crypto
-- Penting
-- Saved
+Buka terminal di folder project:
 
-Blockchain & Crypto mencakup query seperti Bitcoin, Ethereum, stablecoin, tokenisasi, Web3, regulasi crypto, ETF, hack/exploit, dan ekosistem blockchain.
+```bat
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+```
 
-## Importance scoring tanpa AI
-
-Backend membaca sinyal pada judul/snippet. Contoh bobot:
+Test di browser:
 
 ```text
-rate cut / rate hike        +18 / +20
-crash                       +25
-recession                   +18
-semiconductor               +12
-artificial intelligence     +12
-bitcoin                     +12
-ethereum                    +11
-stablecoin                  +12
-hack / exploit              +24 / +22
-crypto regulation           +14
-large % move                +12
-large $ billion/trillion    +14
+http://localhost:5000/api/health
 ```
 
-Level visual:
+Harus menghasilkan JSON dengan `"ok": true`.
+
+Test root:
 
 ```text
-0-39   Normal
-40-69  Perhatian
-70-84  Penting
-85-100 Sangat Penting
+http://localhost:5000/
 ```
 
-Semua aturan ada di `backend/services/analyzer.py` dan dapat diubah tanpa API eksternal.
+### 2. Jalankan frontend lokal
 
-## Jalankan di Windows
+Buka terminal kedua dari folder project:
 
-### Backend
-
-Double click:
-
-```text
-start-backend.bat
-```
-
-File `.env` cukup berisi:
-
-```env
-PORT=5000
-NEWS_REFRESH_MINUTES=20
-MAX_ITEMS_PER_FEED=8
-CORS_ORIGINS=*
-```
-
-Tidak ada API key.
-
-### Frontend
-
-Double click:
-
-```text
-start-frontend.bat
+```bat
+cd frontend
+python -m http.server 8080
 ```
 
 Buka:
 
 ```text
-http://localhost:5500
+http://localhost:8080
 ```
 
-Backend lokal:
+Saat hostname adalah `localhost` atau `127.0.0.1`, frontend otomatis memakai `http://localhost:5000/api`.
+
+---
+
+# B. UPLOAD GITHUB
+
+Repository target sudah dikunci ke:
 
 ```text
-http://localhost:5000/api
+https://github.com/ignatiusarwalembun/mabacrypto_news.git
 ```
 
-## Endpoint backend
+Cara paling sederhana:
+
+1. Pastikan Git for Windows sudah terpasang dan login GitHub sudah aktif.
+2. Double click `auto-upload-github.bat`.
+3. BAT akan fetch `origin/main`, memakai remote sebagai baseline, mempertahankan snapshot folder lokal sebagai versi terbaru, melakukan `git add -A`, commit, lalu push.
+4. BAT juga mencoba membersihkan state rebase/merge lama sebelum upload.
+
+---
+
+# C. DEPLOY RAILWAY
+
+1. Di Railway pilih **New Project → Deploy from GitHub repo**.
+2. Pilih repository `mabacrypto_news`.
+3. Railway membaca `railway.toml` dari root project.
+4. Tambahkan environment variables:
 
 ```text
+DATABASE_PATH=/app/data/news.db
+NEWS_REFRESH_MINUTES=20
+CORS_ORIGINS=*
+```
+
+5. Tambahkan Railway Volume dan mount ke:
+
+```text
+/app/data
+```
+
+6. Deploy backend.
+
+Start command sudah disiapkan:
+
+```text
+cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+```
+
+---
+
+# D. TEST RAILWAY /api/health
+
+**Jangan lanjut ke Netlify sebelum tahap ini berhasil.**
+
+Buka:
+
+```text
+https://DOMAIN-RAILWAY/api/health
+```
+
+Harus menghasilkan response seperti:
+
+```json
+{
+  "ok": true,
+  "service": "MabaCrypto News API"
+}
+```
+
+Lalu test:
+
+```text
+https://DOMAIN-RAILWAY/api/news
+```
+
+Jika database masih kosong, scheduler akan menjalankan refresh otomatis beberapa detik setelah backend hidup. Frontend juga memicu refresh sekali jika daftar berita masih kosong.
+
+---
+
+# E. MASUKKAN DOMAIN RAILWAY KE PRODUCTION CONFIG
+
+`frontend/config.js` saat project ini dibuat sudah berisi:
+
+```text
+https://mabacryptonews-production.up.railway.app/api
+```
+
+Jika Railway project yang dipakai memang menggunakan domain tersebut, **tidak perlu mengubah source code apa pun**.
+
+Jika Railway memberikan domain baru yang berbeda, ubah hanya nilai `API_BASE_URL` di `frontend/config.js` ke:
+
+```text
+https://DOMAIN-BARU.up.railway.app/api
+```
+
+Frontend production tidak memakai localStorage untuk koneksi backend.
+
+---
+
+# F. PUSH UPDATE
+
+Jika domain Railway berubah dan `config.js` telah disesuaikan, double click lagi:
+
+```text
+auto-upload-github.bat
+```
+
+---
+
+# G. DEPLOY NETLIFY
+
+1. Di Netlify pilih **Add new site → Import an existing project**.
+2. Hubungkan GitHub repository `mabacrypto_news`.
+3. `netlify.toml` di root sudah menetapkan publish directory ke `frontend`.
+4. Tidak ada build command karena frontend adalah HTML/CSS/Vanilla JS.
+5. Deploy.
+
+---
+
+# H. TEST LAPTOP
+
+Dari laptop:
+
+1. Buka domain Netlify.
+2. Pastikan status menjadi **BACKEND AKTIF**.
+3. Pastikan berita muncul.
+4. Coba filter kategori, source, search, theme, dan save news.
+5. Refresh browser. Saved news tetap tersimpan karena status save berada di SQLite backend.
+
+---
+
+# I. TEST HP
+
+Dari HP menggunakan domain Netlify yang sama:
+
+1. Jangan mengatur backend secara manual.
+2. Website otomatis memakai `API_BASE_URL` production dari `config.js`.
+3. Pastikan status **BACKEND AKTIF**.
+4. Pastikan tidak ada horizontal scroll.
+5. Buka menu mobile dan test seluruh navigation.
+6. Test save news dan buka menu **TERSIMPAN**.
+7. Test juga browser incognito untuk memastikan koneksi backend tetap otomatis.
+
+## Endpoint API
+
+```text
+GET   /
 GET   /api/health
 GET   /api/news
 POST  /api/refresh
 PATCH /api/news/:id/saved
 ```
 
-Contoh:
+Contoh PATCH:
 
-```text
-/api/news?category=investment
-/api/news?category=technology
-/api/news?category=crypto
-/api/news?category=crypto&source=Bloomberg
-/api/news?important=true
-/api/news?saved=true
-/api/news?search=bitcoin
+```json
+{
+  "saved": true
+}
 ```
 
-## Deploy Railway
+## Catatan sumber berita
 
-1. Push project ke GitHub.
-2. Railway → New Project → Deploy from GitHub.
-3. Pilih repo `ignatiusarwalembun/mabacrypto_news`.
-4. Set **Root Directory** ke `/backend`.
-5. Start command dapat memakai Procfile: `python app.py`.
-6. Tambahkan variable:
+Project tidak melakukan bypass paywall dan tidak mengambil full article Bloomberg/Kontan. Google News RSS dipakai sebagai discovery source. Link artikel dicoba didecode ke publisher original menggunakan `googlenewsdecoder`; jika decoding gagal, discovery link Google News tetap dipakai sehingga user masih diarahkan ke artikel publisher melalui Google News.
 
-```text
-NEWS_REFRESH_MINUTES=20
-MAX_ITEMS_PER_FEED=8
-CORS_ORIGINS=*
-```
-
-`PORT` diberikan Railway otomatis, jadi tidak perlu dibuat manual.
-
-**Tidak perlu `OPENAI_API_KEY`.**
-
-Untuk SQLite persisten di Railway, attach Volume ke lokasi data aplikasi sebelum dipakai jangka panjang.
-
-## Deploy Netlify
-
-Set URL Railway di:
-
-```js
-// frontend/config.js
-window.APP_CONFIG = {
-  API_BASE_URL: "https://URL-BACKEND-RAILWAY-KAMU/api"
-};
-```
-
-Lalu push ke GitHub dan deploy folder `frontend` ke Netlify.
-
-## Auto upload GitHub
-
-Double click:
-
-```text
-auto-upload-github.bat
-```
-
-Script akan scan perubahan project, commit, sync, dan push ke:
-
-```text
-https://github.com/ignatiusarwalembun/mabacrypto_news.git
-```
-
-`.env`, database lokal, virtual environment, cache, dan file development lain tetap di-ignore.
-
-## Railway production deployment
-
-Versi ini sudah Railway-ready:
-- `railway.toml` untuk Railpack, Gunicorn, dan healthcheck.
-- `backend/mise.toml` menggunakan Python 3.13 tanpa pin patch 3.12.4 lama.
-- Gunicorn menjalankan satu worker dengan threads agar scheduler berita tidak terduplikasi.
-- Endpoint healthcheck: `/api/health`.
-- Untuk SQLite persistent, mount Railway Volume ke `/app/data` dan set `DATABASE_PATH=/app/data/news.db`.
-
-Lihat `RAILWAY_DEPLOY.md`.
-
-## Safe GitHub Auto Upload
-
-`auto-upload-github.bat` versi ini tidak lagi memakai `git pull --rebase`.
-Untuk workflow update via ZIP, GitHub `main` dijadikan baseline dan isi folder lokal
-dijadikan snapshot terbaru. Ini menghindari konflik `add/add` ketika project diextract
-ke folder baru lalu diupload ke repository yang sama.
-
-## Production backend for all devices
-
-Frontend sekarang otomatis memakai:
-
-`https://mabacryptonews-production.up.railway.app/api`
-
-Production URL memiliki prioritas di atas localStorage, sehingga laptop, HP,
-tablet, browser baru, dan incognito langsung terhubung ke backend yang sama.
+Translation memakai layanan non-LLM melalui `deep-translator`. Jika translation gagal, artikel tetap disimpan dan teks original menjadi fallback.
