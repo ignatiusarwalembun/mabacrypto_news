@@ -108,7 +108,7 @@ def collect_news():
             response = requests.get(
                 url,
                 timeout=15,
-                headers={"User-Agent": "AurumNewsIntelligence/1.0 (+news-dashboard)"},
+                headers={"User-Agent": "MabaCryptoNews/1.0 (+news-dashboard)"},
             )
             response.raise_for_status()
             parsed = feedparser.parse(response.content)

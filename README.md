@@ -197,3 +197,14 @@ https://github.com/ignatiusarwalembun/mabacrypto_news.git
 ```
 
 `.env`, database lokal, virtual environment, cache, dan file development lain tetap di-ignore.
+
+## Railway production deployment
+
+Versi ini sudah Railway-ready:
+- `railway.toml` untuk Railpack, Gunicorn, dan healthcheck.
+- `backend/mise.toml` menggunakan Python 3.13 tanpa pin patch 3.12.4 lama.
+- Gunicorn menjalankan satu worker dengan threads agar scheduler berita tidak terduplikasi.
+- Endpoint healthcheck: `/api/health`.
+- Untuk SQLite persistent, mount Railway Volume ke `/app/data` dan set `DATABASE_PATH=/app/data/news.db`.
+
+Lihat `RAILWAY_DEPLOY.md`.

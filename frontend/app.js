@@ -11,7 +11,6 @@ const state = {
 
 const els = {
   newsGrid: document.getElementById("newsGrid"),
-  loading: document.getElementById("loadingState"),
   empty: document.getElementById("emptyState"),
   resultCount: document.getElementById("resultCount"),
   source: document.getElementById("sourceSelect"),
@@ -90,13 +89,6 @@ function cardTemplate(item) {
     </article>`;
 }
 
-function setLoading(isLoading) {
-  els.loading.hidden = !isLoading;
-  if (isLoading) {
-    els.newsGrid.hidden = true;
-    els.empty.hidden = true;
-  }
-}
 
 function showToast(message) {
   els.toast.textContent = message;
@@ -140,8 +132,9 @@ function buildQuery() {
 }
 
 async function loadNews() {
-  setLoading(true);
   updateSectionText();
+  els.resultCount.textContent = "Memuat berita…";
+  els.empty.hidden = true;
   try {
     const response = await fetch(`${API}/news?${buildQuery().toString()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -154,8 +147,6 @@ async function loadNews() {
     renderNews();
     showToast("Backend belum terhubung. Jalankan backend Flask dulu.");
     console.error(error);
-  } finally {
-    setLoading(false);
   }
 }
 
@@ -219,7 +210,7 @@ function setView(view) {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  localStorage.setItem("aurum-theme", theme);
+  localStorage.setItem("mabacrypto-news-theme", theme);
   document.querySelector('meta[name="theme-color"]').setAttribute("content", theme === "dark" ? "#080808" : "#f6f4ee");
 }
 
@@ -240,5 +231,5 @@ els.search.addEventListener("input", () => {
 els.refresh.addEventListener("click", refreshNews);
 els.theme.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 
-applyTheme(localStorage.getItem("aurum-theme") || "dark");
+applyTheme(localStorage.getItem("mabacrypto-news-theme") || "dark");
 loadNews();
