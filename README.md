@@ -215,3 +215,12 @@ Lihat `RAILWAY_DEPLOY.md`.
 Untuk workflow update via ZIP, GitHub `main` dijadikan baseline dan isi folder lokal
 dijadikan snapshot terbaru. Ini menghindari konflik `add/add` ketika project diextract
 ke folder baru lalu diupload ke repository yang sama.
+
+## Production backend for all devices
+
+Frontend sekarang otomatis memakai:
+
+`https://mabacryptonews-production.up.railway.app/api`
+
+Production URL memiliki prioritas di atas localStorage, sehingga laptop, HP,
+tablet, browser baru, dan incognito langsung terhubung ke backend yang sama.

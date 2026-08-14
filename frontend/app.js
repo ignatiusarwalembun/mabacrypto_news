@@ -5,11 +5,11 @@ function normalizeApiBase(value) {
 }
 
 function resolveApiBase() {
-  // Production config is the source of truth so every device connects automatically.
+  // Production config is authoritative so every device auto-connects.
   const configured = window.APP_CONFIG?.API_BASE_URL;
   if (configured) return normalizeApiBase(configured);
 
-  // Optional per-device override is only a fallback when no production URL is configured.
+  // Optional browser override only when no production URL exists.
   const saved = localStorage.getItem("mabacrypto-api-base");
   if (saved) return normalizeApiBase(saved);
 
@@ -118,6 +118,7 @@ function cardTemplate(item) {
     </article>`;
 }
 
+
 function showToast(message) {
   els.toast.textContent = message;
   els.toast.classList.add("show");
@@ -158,6 +159,7 @@ function buildQuery() {
   if (state.search) params.set("search", state.search);
   return params;
 }
+
 
 function setBackendStatus(mode, message) {
   els.backendStatus.textContent = message;
@@ -230,7 +232,7 @@ async function loadNews() {
     setBackendStatus("offline", "Backend tidak terhubung");
     els.empty.hidden = false;
     els.empty.querySelector("h3").textContent = "Berita belum bisa dimuat.";
-    els.empty.querySelector("p").textContent = "Backend production belum merespons. Coba refresh halaman beberapa saat lagi.";
+    els.empty.querySelector("p").textContent = "Cek URL Railway lewat tombol “Hubungkan Backend”, lalu pastikan /api/health bisa dibuka.";
     showToast("Frontend belum bisa terhubung ke backend Railway.");
     console.error(error);
   }
@@ -329,7 +331,6 @@ els.saveBackendUrl.addEventListener("click", async () => {
     return;
   }
   localStorage.setItem("mabacrypto-api-base", raw);
-  // Manual URL remains available as a fallback, but production config is authoritative.
   API = normalizeApiBase(window.APP_CONFIG?.API_BASE_URL || raw);
   closeBackendModal();
   const ok = await testBackend();
@@ -337,9 +338,10 @@ els.saveBackendUrl.addEventListener("click", async () => {
     showToast("Backend Railway berhasil terhubung.");
     await loadNews();
   } else {
-    showToast("Backend belum merespons.");
+    showToast("URL tersimpan, tapi backend belum merespons.");
   }
 });
+
 
 applyTheme(localStorage.getItem("mabacrypto-theme") || localStorage.getItem("aurum-theme") || "dark");
 loadNews();
