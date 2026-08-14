@@ -335,53 +335,29 @@ html[data-theme="light"] .moon-icon { display: block; }
 }
 
 
-/* ===== REAL MOBILE LAYOUT — uses actual project classes ===== */
-html, body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-@media (max-width: 768px) {
-  :root {
-    --page: calc(100vw - 28px);
-    --section-gap: 56px;
-    --radius-lg: 22px;
-    --radius-md: 18px;
-  }
-
+/* ===== MOBILE FIX ONLY: desktop styles above remain untouched ===== */
+@media (max-width: 680px) {
   body {
-    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 
-  .section-wrap {
-    width: var(--page);
+  .app-shell,
+  .section-wrap,
+  .topbar {
     max-width: 100%;
   }
 
   .topbar {
-    width: calc(100vw - 28px);
-    min-height: 76px;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
-  }
-
-  .desktop-nav {
-    display: none !important;
   }
 
   .brand {
     min-width: 0;
     max-width: 100%;
-    gap: 9px;
-  }
-
-  .brand-mark {
-    width: 34px;
-    height: 34px;
-    flex: 0 0 34px;
-    border-radius: 11px;
-    font-size: 17px;
   }
 
   .brand-copy {
@@ -391,141 +367,55 @@ html, body {
   .brand-copy strong {
     display: block;
     max-width: 150px;
-    font-size: 12px;
-    letter-spacing: .10em;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .brand-copy small {
-    display: none;
+    white-space: nowrap;
   }
 
   .top-actions {
-    gap: 7px;
+    min-width: 0;
+    gap: 8px;
   }
 
   .connect-btn {
-    max-width: 112px;
+    max-width: 108px;
     min-height: 40px;
-    padding: 0 11px;
+    padding: 0 10px;
     font-size: 11px;
     overflow: hidden;
-    white-space: nowrap;
     text-overflow: ellipsis;
-  }
-
-  .icon-btn {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    border-radius: 12px;
-  }
-
-  #refreshBtn {
-    display: none;
+    white-space: nowrap;
   }
 
   .hero {
-    display: block;
-    padding-top: 36px;
-    padding-bottom: 52px;
-  }
-
-  .hero-copy {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .eyebrow {
-    display: block;
-    max-width: 100%;
-    font-size: 9px;
-    line-height: 1.55;
-    letter-spacing: .14em;
-    overflow-wrap: anywhere;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-top: 40px;
   }
 
   .hero h1 {
-    font-size: clamp(34px, 11.4vw, 52px);
+    font-size: clamp(36px, 12vw, 56px);
     line-height: 1.02;
-    letter-spacing: -.045em;
-    margin: 17px 0 20px;
     max-width: 100%;
-  }
-
-  .hero h1 br {
-    display: none;
   }
 
   .hero-copy p {
     font-size: 14px;
-    line-height: 1.62;
-    max-width: 100%;
+    line-height: 1.65;
   }
 
   .hero-status {
     width: 100%;
-    max-width: none;
-    margin-top: 34px;
-    padding: 22px;
-    border-radius: 20px;
-  }
-
-  .status-number {
-    font-size: 50px;
-    margin-top: 22px;
-  }
-
-  .status-divider {
-    margin: 22px 0 18px;
+    max-width: 100%;
   }
 
   .status-mini-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px 10px;
-  }
-
-  .status-mini-grid div {
-    min-width: 0;
-    padding: 10px 0;
-  }
-
-  .status-mini-grid strong {
-    font-size: 20px;
-  }
-
-  .status-mini-grid span {
-    font-size: 10px;
-  }
-
-  .controls {
-    gap: 16px;
-    margin-bottom: 48px;
-  }
-
-  .search-wrap input {
-    height: 54px;
-    font-size: 16px;
-    border-radius: 15px;
-    padding-left: 48px;
-  }
-
-  .search-wrap svg {
-    left: 17px;
-    width: 18px;
-  }
-
-  .filter-row {
-    display: block;
   }
 
   .filter-group {
-    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 9px;
-    margin-bottom: 10px;
+    width: 100%;
   }
 
   .filter-chip {
@@ -533,37 +423,16 @@ html, body {
     min-width: 0;
     min-height: 44px;
     padding: 0 8px;
-    font-size: 11px;
     white-space: normal;
-    line-height: 1.25;
-  }
-
-  .source-select {
-    width: 100%;
-    min-height: 46px;
-    font-size: 16px;
   }
 
   .section-heading {
     align-items: flex-start;
     flex-direction: column;
-    gap: 7px;
-    margin-bottom: 22px;
-  }
-
-  .section-heading h2 {
-    font-size: 28px;
-    line-height: 1.1;
-    margin-top: 7px;
-  }
-
-  .result-count {
-    padding-bottom: 0;
   }
 
   .news-grid {
     grid-template-columns: 1fr !important;
-    gap: 14px;
     width: 100%;
   }
 
@@ -571,151 +440,41 @@ html, body {
     width: 100%;
     min-width: 0;
     min-height: 0;
-    padding: 18px;
-    border-radius: 17px;
+    padding: 20px;
   }
 
-  .card-top {
-    gap: 8px;
-  }
-
-  .badge {
-    min-height: 28px;
-    font-size: 8px;
-    letter-spacing: .07em;
-  }
-
-  .score strong {
-    font-size: 18px;
-  }
-
-  .news-card h3 {
-    font-size: 20px;
-    line-height: 1.3;
-    margin: 20px 0 12px;
+  .news-card h3,
+  .news-summary,
+  .importance-reason,
+  .meta {
     overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
-  .news-summary {
-    font-size: 13px;
-    line-height: 1.62;
-    margin-bottom: 18px;
-    overflow-wrap: anywhere;
-  }
-
-  .importance-reason {
-    font-size: 11px;
-    margin-bottom: 18px;
   }
 
   .card-bottom {
-    align-items: center;
     gap: 10px;
-    padding-top: 16px;
-  }
-
-  .meta {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .meta strong {
-    max-width: 100%;
-    font-size: 10px;
-  }
-
-  .meta span {
-    font-size: 9px;
-    line-height: 1.45;
-  }
-
-  .card-actions {
-    flex: 0 0 auto;
-    gap: 6px;
-  }
-
-  .card-btn {
-    width: 40px;
-    height: 40px;
-  }
-
-  .footer {
-    min-height: 130px;
-    padding-bottom: 96px;
-    align-items: flex-start;
-    justify-content: center;
-    flex-direction: column;
-    gap: 8px;
   }
 
   .mobile-nav {
-    display: grid !important;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    position: fixed;
-    z-index: 100;
     left: 8px;
     right: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom));
     width: auto;
     transform: none;
-    padding: 7px 5px;
-    border-radius: 20px;
-    border: 1px solid var(--border-strong);
-    background: color-mix(in srgb, var(--surface) 94%, transparent);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 18px 50px rgba(0,0,0,.35);
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    padding: 7px 4px;
   }
 
   .mobile-nav-item {
     min-width: 0;
-    min-height: 54px;
-    padding: 6px 2px;
-    border-radius: 14px;
+    min-height: 52px;
+    padding: 5px 2px;
     font-size: 8px;
-    line-height: 1.1;
-    overflow: hidden;
-  }
-
-  .mobile-nav-item span {
-    display: block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .mobile-nav-item svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .toast {
-    left: 12px;
-    right: 12px;
-    bottom: calc(84px + env(safe-area-inset-bottom));
-    max-width: none;
-  }
-
-  .backend-modal {
-    align-items: end;
-    padding: 10px;
   }
 
   .backend-modal-card {
     width: 100%;
-    max-height: calc(100dvh - 20px);
+    max-height: calc(100dvh - 24px);
     overflow-y: auto;
-    padding: 20px;
-    border-radius: 22px;
-  }
-
-  .backend-modal-head {
-    gap: 10px;
-  }
-
-  .backend-modal-head h3 {
-    font-size: 25px;
   }
 
   .backend-url-row {
@@ -731,51 +490,26 @@ html, body {
 }
 
 @media (max-width: 430px) {
-  :root {
-    --page: calc(100vw - 20px);
-  }
-
-  .topbar {
-    width: calc(100vw - 20px);
-  }
-
   .brand-copy strong {
-    max-width: 120px;
+    max-width: 115px;
     font-size: 11px;
   }
 
   .connect-btn {
-    max-width: 88px;
+    max-width: 82px;
     font-size: 10px;
   }
 
-  .hero {
-    padding-top: 28px;
-  }
-
   .hero h1 {
-    font-size: clamp(32px, 11vw, 44px);
-  }
-
-  .hero-status {
-    padding: 18px;
+    font-size: clamp(34px, 11vw, 46px);
   }
 
   .news-card {
-    padding: 16px;
-  }
-
-  .mobile-nav {
-    left: 5px;
-    right: 5px;
-    bottom: calc(5px + env(safe-area-inset-bottom));
-    padding-left: 3px;
-    padding-right: 3px;
+    padding: 17px;
   }
 
   .mobile-nav-item {
     font-size: 7px;
-    min-height: 52px;
   }
 }
 
@@ -784,24 +518,11 @@ html, body {
     display: none;
   }
 
-  .brand-copy strong {
-    max-width: 135px;
-  }
-
-  .hero h1 {
-    font-size: 32px;
-  }
-
   .filter-group {
     grid-template-columns: 1fr;
   }
 
-  .mobile-nav-item span {
+  .mobile-nav-item {
     font-size: 0;
-  }
-
-  .mobile-nav-item svg {
-    width: 20px;
-    height: 20px;
   }
 }
