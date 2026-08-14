@@ -1,55 +1,73 @@
-export default async (request, context) => {
+exports.handler = async function(event) {
   const railwayBase = (process.env.RAILWAY_API_URL || "").replace(/\/+$/, "");
 
   if (!railwayBase) {
-    return new Response(
-      JSON.stringify({
+    return {
+      statusCode: 500,
+      headers: { "content-type": "application/json; charset=utf-8" },
+      body: JSON.stringify({
         error: "RAILWAY_API_URL belum diatur di Netlify Environment Variables."
-      }),
-      {
-        status: 500,
-        headers: { "content-type": "application/json; charset=utf-8" }
-      }
-    );
+      })
+    };
   }
 
-  const incoming = new URL(request.url);
-  const apiPath = incoming.pathname.replace(/^\/api/, "");
-  const target = new URL(`${railwayBase}/api${apiPath}${incoming.search}`);
+  const path = (event.queryStringParameters?.path || "").replace(/^\/+/, "");
 
-  const headers = new Headers(request.headers);
-  headers.delete("host");
+  const originalQuery = { ...(event.queryStringParameters || {}) };
+  delete originalQuery.path;
+
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(originalQuery)) {
+    if (value !== undefined && value !== null) {
+      params.append(key, value);
+    }
+  }
+
+  const query = params.toString();
+  const target = `${railwayBase}/api/${path}${query ? `?${query}` : ""}`;
+
+  const headers = { ...(event.headers || {}) };
+  delete headers.host;
+  delete headers.Host;
 
   const init = {
-    method: request.method,
+    method: event.httpMethod,
     headers,
     redirect: "follow"
   };
 
-  if (!["GET", "HEAD"].includes(request.method)) {
-    init.body = await request.arrayBuffer();
+  if (!["GET", "HEAD"].includes(event.httpMethod) && event.body) {
+    init.body = event.isBase64Encoded
+      ? Buffer.from(event.body, "base64")
+      : event.body;
   }
 
   try {
     const upstream = await fetch(target, init);
-    const responseHeaders = new Headers(upstream.headers);
-    responseHeaders.delete("content-encoding");
-    responseHeaders.delete("content-length");
+    const body = await upstream.text();
 
-    return new Response(upstream.body, {
-      status: upstream.status,
-      headers: responseHeaders
-    });
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: "Gagal terhubung ke backend Railway.",
-        detail: String(error?.message || error)
-      }),
-      {
-        status: 502,
-        headers: { "content-type": "application/json; charset=utf-8" }
+    const responseHeaders = {};
+    upstream.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if (!["content-encoding", "content-length", "transfer-encoding"].includes(lower)) {
+        responseHeaders[key] = value;
       }
-    );
+    });
+
+    return {
+      statusCode: upstream.status,
+      headers: responseHeaders,
+      body
+    };
+  } catch (error) {
+    return {
+      statusCode: 502,
+      headers: { "content-type": "application/json; charset=utf-8" },
+      body: JSON.stringify({
+        error: "Gagal terhubung ke backend Railway.",
+        detail: String(error?.message || error),
+        target
+      })
+    };
   }
 };
