@@ -2,13 +2,20 @@ from flask import Blueprint, jsonify, request
 
 from services.database import count_news, query_news, set_saved, stats
 from services.refresher import get_refresh_state, refresh_news, refresh_news_async
+from services.news_collector import get_collector_state
 
 news_bp = Blueprint("news", __name__, url_prefix="/api")
 
 
 @news_bp.get("/health")
 def health():
-    return jsonify({"ok": True, "service": "Golden News Intelligence API"})
+    return jsonify({
+        "ok": True,
+        "service": "mabacrypto news API",
+        "refresh": get_refresh_state(),
+        "collector": get_collector_state(),
+        "stats": stats(),
+    })
 
 
 @news_bp.get("/news")
