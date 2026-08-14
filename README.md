@@ -208,3 +208,10 @@ Versi ini sudah Railway-ready:
 - Untuk SQLite persistent, mount Railway Volume ke `/app/data` dan set `DATABASE_PATH=/app/data/news.db`.
 
 Lihat `RAILWAY_DEPLOY.md`.
+
+## Safe GitHub Auto Upload
+
+`auto-upload-github.bat` versi ini tidak lagi memakai `git pull --rebase`.
+Untuk workflow update via ZIP, GitHub `main` dijadikan baseline dan isi folder lokal
+dijadikan snapshot terbaru. Ini menghindari konflik `add/add` ketika project diextract
+ke folder baru lalu diupload ke repository yang sama.

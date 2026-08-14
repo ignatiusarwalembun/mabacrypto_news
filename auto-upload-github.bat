@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title Auto Upload GitHub - mabacrypto_news
+title MabaCrypto News - Safe Auto Upload GitHub
 
 cd /d "%~dp0"
 
@@ -9,7 +9,7 @@ set "BRANCH=main"
 
 echo.
 echo ============================================
-echo   MABACRYPTO NEWS - AUTO GITHUB UPLOADER
+echo   MABACRYPTO NEWS - SAFE AUTO UPLOADER
 echo ============================================
 echo.
 
@@ -21,92 +21,114 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Bersihkan state rebase/merge lama agar BAT bisa dipakai lagi.
+if exist ".git\rebase-merge" (
+    echo [INFO] Rebase lama terdeteksi. Membatalkan rebase...
+    git rebase --abort >nul 2>&1
+)
+if exist ".git\rebase-apply" (
+    echo [INFO] Rebase lama terdeteksi. Membatalkan rebase...
+    git rebase --abort >nul 2>&1
+)
+if exist ".git\MERGE_HEAD" (
+    echo [INFO] Merge lama terdeteksi. Membatalkan merge...
+    git merge --abort >nul 2>&1
+)
+
 if not exist ".git" (
-    echo [1/7] Membuat repository Git lokal...
+    echo [1/8] Membuat repository Git lokal...
     git init
     if errorlevel 1 goto :error
 ) else (
-    echo [1/7] Repository Git lokal sudah ada.
+    echo [1/8] Repository Git lokal ditemukan.
 )
 
 git config user.name >nul 2>&1
 if errorlevel 1 (
-    echo.
     set /p "GIT_NAME=Masukkan nama GitHub / nama commit: "
     if not "!GIT_NAME!"=="" git config user.name "!GIT_NAME!"
 )
 
 git config user.email >nul 2>&1
 if errorlevel 1 (
-    echo.
     set /p "GIT_EMAIL=Masukkan email GitHub: "
     if not "!GIT_EMAIL!"=="" git config user.email "!GIT_EMAIL!"
 )
 
-echo [2/7] Menyiapkan branch %BRANCH%...
-git branch -M %BRANCH%
-if errorlevel 1 goto :error
-
 git remote get-url origin >nul 2>&1
 if errorlevel 1 (
-    echo [3/7] Menambahkan remote GitHub...
+    echo [2/8] Menambahkan remote GitHub...
     git remote add origin "%REPO_URL%"
     if errorlevel 1 goto :error
 ) else (
     for /f "delims=" %%R in ('git remote get-url origin') do set "CURRENT_REMOTE=%%R"
     if /I not "!CURRENT_REMOTE!"=="%REPO_URL%" (
-        echo [3/7] Mengubah remote origin ke mabacrypto_news...
+        echo [2/8] Mengubah remote origin...
         git remote set-url origin "%REPO_URL%"
         if errorlevel 1 goto :error
     ) else (
-        echo [3/7] Remote origin sudah benar.
+        echo [2/8] Remote origin sudah benar.
     )
 )
 
-echo [4/7] Scan seluruh file project...
+echo [3/8] Mengambil kondisi terbaru dari GitHub...
+git fetch origin %BRANCH%
+if errorlevel 1 (
+    echo [INFO] Remote branch mungkin masih kosong. Lanjut sebagai upload pertama.
+    goto :firstpush
+)
+
+echo [4/8] Menjadikan GitHub sebagai baseline tanpa menimpa file lokal...
+REM Reset index/HEAD ke remote, tapi WORKTREE LOKAL TETAP DIPERTAHANKAN.
+git reset --mixed origin/%BRANCH%
+if errorlevel 1 goto :error
+
+goto :stage
+
+:firstpush
+echo [4/8] Menyiapkan branch upload pertama...
+git branch -M %BRANCH%
+if errorlevel 1 goto :error
+
+:stage
+echo [5/8] Scan seluruh file project lokal...
 git add -A
 if errorlevel 1 goto :error
 
 git diff --cached --quiet
 if not errorlevel 1 (
     echo.
-    echo [INFO] Tidak ada perubahan baru untuk di-commit.
-    goto :push
+    echo [INFO] Tidak ada perubahan dibanding GitHub.
+    echo Project sudah sinkron.
+    goto :success
 )
 
-echo.
 set "COMMIT_MSG="
-set /p "COMMIT_MSG=Commit message [Update mabacrypto_news]: "
-if "!COMMIT_MSG!"=="" set "COMMIT_MSG=Update mabacrypto_news"
+echo.
+set /p "COMMIT_MSG=Commit message [Update MabaCrypto News]: "
+if "!COMMIT_MSG!"=="" set "COMMIT_MSG=Update MabaCrypto News"
 
-echo [5/7] Membuat commit...
+echo [6/8] Membuat commit dari snapshot folder lokal...
 git commit -m "!COMMIT_MSG!"
 if errorlevel 1 goto :error
 
-:push
-echo [6/7] Sinkronisasi dengan GitHub...
+echo [7/8] Memastikan branch main...
+git branch -M %BRANCH%
+if errorlevel 1 goto :error
 
-git ls-remote --exit-code --heads origin %BRANCH% >nul 2>&1
-if not errorlevel 1 (
-    git pull --rebase origin %BRANCH%
-    if errorlevel 1 (
-        echo.
-        echo [ERROR] Pull/rebase gagal karena kemungkinan conflict.
-        echo Selesaikan conflict terlebih dahulu lalu jalankan BAT ini lagi.
-        pause
-        exit /b 1
-    )
-)
-
-echo [7/7] Upload ke GitHub...
+echo [8/8] Upload ke GitHub...
 git push -u origin %BRANCH%
 if errorlevel 1 goto :error
 
+:success
 echo.
 echo ============================================
-echo   SUCCESS - PROJECT SUDAH DIUPLOAD
+echo   SUCCESS - GITHUB SUDAH TERUPDATE
 echo ============================================
 echo https://github.com/ignatiusarwalembun/mabacrypto_news
+echo.
+echo Workflow:
+echo Extract versi baru ^> klik BAT ^> commit ^> selesai.
 echo.
 pause
 exit /b 0
@@ -114,11 +136,10 @@ exit /b 0
 :error
 echo.
 echo ============================================
-echo   GAGAL MENJALANKAN GIT COMMAND
+echo   GAGAL MENJALANKAN AUTO UPLOAD
 echo ============================================
-echo Cek pesan error Git di atas.
-echo Jika GitHub meminta login, login melalui
-echo Git Credential Manager / browser lalu ulangi.
+echo Cek error Git di atas.
+echo Jika diminta login GitHub, selesaikan login lewat browser.
 echo.
 pause
 exit /b 1

@@ -8,7 +8,7 @@ news_bp = Blueprint("news", __name__, url_prefix="/api")
 
 @news_bp.get("/health")
 def health():
-    return jsonify({"ok": True, "service": "Golden News Intelligence API"})
+    return jsonify({"ok": True, "service": "MabaCrypto News API"})
 
 
 @news_bp.get("/news")

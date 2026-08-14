@@ -32,6 +32,7 @@
       </nav>
 
       <div class="top-actions">
+        <button id="connectBackendBtn" class="connect-btn" type="button" title="Hubungkan frontend ke Railway">Hubungkan Backend</button>
         <button id="refreshBtn" class="icon-btn" aria-label="Perbarui berita" title="Perbarui berita">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.9-4L3 9m0 0V4m0 5h5m-4 4a8.1 8.1 0 0 0 14.9 4L21 15m0 0v5m0-5h-5"/></svg>
         </button>
@@ -52,8 +53,8 @@
 
         <div class="hero-status glass-card">
           <div class="status-topline">
-            <span class="live-dot"></span>
-            <span>News monitor aktif</span>
+            <span class="live-dot" id="backendDot"></span>
+            <span id="backendStatus">Menghubungkan backend...</span>
           </div>
           <div class="status-number" id="totalNews">0</div>
           <span class="status-label">artikel terindeks</span>
@@ -141,6 +142,25 @@
       <span>Simpan</span>
     </button>
   </nav>
+
+
+  <div id="backendModal" class="backend-modal" hidden>
+    <div class="backend-modal-card">
+      <div class="backend-modal-head">
+        <div>
+          <span class="section-kicker">BACKEND CONNECTION</span>
+          <h3>Hubungkan Railway</h3>
+        </div>
+        <button id="closeBackendModal" class="icon-btn" type="button" aria-label="Tutup">×</button>
+      </div>
+      <p>Tempel URL public backend Railway. Contoh: <strong>https://nama-project.up.railway.app</strong></p>
+      <div class="backend-url-row">
+        <input id="backendUrlInput" type="url" placeholder="https://...up.railway.app" autocomplete="off" />
+        <button id="saveBackendUrl" class="primary-btn" type="button">Simpan & Hubungkan</button>
+      </div>
+      <small>URL disimpan lokal di browser ini. Jangan tambahkan <code>/api/news</code>; cukup domain Railway.</small>
+    </div>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

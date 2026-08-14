@@ -1,4 +1,24 @@
-const API = window.APP_CONFIG?.API_BASE_URL || "http://localhost:5000/api";
+function normalizeApiBase(value) {
+  const raw = String(value || "").trim().replace(/\/+$/, "");
+  if (!raw) return "";
+  return raw.endsWith("/api") ? raw : `${raw}/api`;
+}
+
+function resolveApiBase() {
+  const saved = localStorage.getItem("mabacrypto-api-base");
+  if (saved) return normalizeApiBase(saved);
+
+  const configured = window.APP_CONFIG?.API_BASE_URL;
+  if (configured) return normalizeApiBase(configured);
+
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1" || window.location.protocol === "file:") {
+    return "http://localhost:5000/api";
+  }
+  return "";
+}
+
+let API = resolveApiBase();
 
 const state = {
   view: "home",
@@ -25,6 +45,13 @@ const els = {
   techCount: document.getElementById("techCount"),
   investCount: document.getElementById("investCount"),
   cryptoCount: document.getElementById("cryptoCount"),
+  backendDot: document.getElementById("backendDot"),
+  backendStatus: document.getElementById("backendStatus"),
+  connectBackend: document.getElementById("connectBackendBtn"),
+  backendModal: document.getElementById("backendModal"),
+  backendUrlInput: document.getElementById("backendUrlInput"),
+  saveBackendUrl: document.getElementById("saveBackendUrl"),
+  closeBackendModal: document.getElementById("closeBackendModal"),
 };
 
 function escapeHtml(value = "") {
@@ -131,21 +158,81 @@ function buildQuery() {
   return params;
 }
 
+
+function setBackendStatus(mode, message) {
+  els.backendStatus.textContent = message;
+  els.backendDot.dataset.state = mode;
+}
+
+function openBackendModal() {
+  const current = localStorage.getItem("mabacrypto-api-base") || window.APP_CONFIG?.API_BASE_URL || "";
+  els.backendUrlInput.value = current.replace(/\/api\/?$/, "");
+  els.backendModal.hidden = false;
+  setTimeout(() => els.backendUrlInput.focus(), 0);
+}
+
+function closeBackendModal() {
+  els.backendModal.hidden = true;
+}
+
+async function testBackend() {
+  if (!API) {
+    setBackendStatus("offline", "Backend belum dihubungkan");
+    return false;
+  }
+  setBackendStatus("connecting", "Menghubungkan backend...");
+  try {
+    const response = await fetch(`${API}/health`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (!data.ok) throw new Error("Health check failed");
+    setBackendStatus("online", "News monitor aktif");
+    return true;
+  } catch (error) {
+    setBackendStatus("offline", "Backend tidak terhubung");
+    return false;
+  }
+}
+
 async function loadNews() {
   updateSectionText();
+
+  if (!API) {
+    state.items = [];
+    updateHeader({});
+    renderNews();
+    setBackendStatus("offline", "Backend belum dihubungkan");
+    els.empty.hidden = false;
+    els.empty.querySelector("h3").textContent = "Hubungkan backend Railway dulu.";
+    els.empty.querySelector("p").textContent = "Tekan tombol “Hubungkan Backend” di kanan atas, lalu tempel URL public Railway.";
+    return;
+  }
+
   try {
-    const response = await fetch(`${API}/news?${buildQuery().toString()}`);
+    setBackendStatus("connecting", "Mengambil berita...");
+    const response = await fetch(`${API}/news?${buildQuery().toString()}`, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     state.items = data.items || [];
     updateHeader(data.stats || {});
     renderNews();
+
+    if (data.refresh?.last_error) {
+      setBackendStatus("warning", "Backend aktif · feed bermasalah");
+      showToast(`Backend aktif, tapi refresh berita bermasalah: ${data.refresh.last_error}`);
+    } else {
+      setBackendStatus("online", "News monitor aktif");
+    }
   } catch (error) {
     state.items = [];
+    updateHeader({});
     renderNews();
-    showToast("Backend belum terhubung. Jalankan backend Flask dulu.");
+    setBackendStatus("offline", "Backend tidak terhubung");
+    els.empty.hidden = false;
+    els.empty.querySelector("h3").textContent = "Berita belum bisa dimuat.";
+    els.empty.querySelector("p").textContent = "Cek URL Railway lewat tombol “Hubungkan Backend”, lalu pastikan /api/health bisa dibuka.";
+    showToast("Frontend belum bisa terhubung ke backend Railway.");
     console.error(error);
-  } finally {
   }
 }
 
@@ -229,6 +316,30 @@ els.search.addEventListener("input", () => {
 });
 els.refresh.addEventListener("click", refreshNews);
 els.theme.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+
+els.connectBackend.addEventListener("click", openBackendModal);
+els.closeBackendModal.addEventListener("click", closeBackendModal);
+els.backendModal.addEventListener("click", event => {
+  if (event.target === els.backendModal) closeBackendModal();
+});
+els.saveBackendUrl.addEventListener("click", async () => {
+  const raw = els.backendUrlInput.value.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(raw)) {
+    showToast("Masukkan URL Railway yang valid, dimulai dengan https://");
+    return;
+  }
+  localStorage.setItem("mabacrypto-api-base", raw);
+  API = normalizeApiBase(raw);
+  closeBackendModal();
+  const ok = await testBackend();
+  if (ok) {
+    showToast("Backend Railway berhasil terhubung.");
+    await loadNews();
+  } else {
+    showToast("URL tersimpan, tapi backend belum merespons.");
+  }
+});
+
 
 applyTheme(localStorage.getItem("mabacrypto-theme") || localStorage.getItem("aurum-theme") || "dark");
 loadNews();

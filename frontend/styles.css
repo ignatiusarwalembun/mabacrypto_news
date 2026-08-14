@@ -259,3 +259,77 @@ html[data-theme="light"] .moon-icon { display: block; }
   .mobile-nav { width:calc(100vw - 18px); }
   .mobile-nav-item { font-size:7px; }
 }
+
+
+.connect-btn{
+  border:1px solid var(--border);
+  background:var(--surface);
+  color:var(--text);
+  border-radius:999px;
+  padding:10px 14px;
+  font-weight:700;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.connect-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+.live-dot[data-state="offline"]{background:#ef5350;box-shadow:0 0 0 5px rgba(239,83,80,.10)}
+.live-dot[data-state="connecting"]{background:#f4c95d;box-shadow:0 0 0 5px rgba(244,201,93,.10)}
+.live-dot[data-state="warning"]{background:#ff9800;box-shadow:0 0 0 5px rgba(255,152,0,.10)}
+.live-dot[data-state="online"]{background:#4caf50;box-shadow:0 0 0 5px rgba(76,175,80,.10)}
+
+.backend-modal{
+  position:fixed;
+  inset:0;
+  z-index:999;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  background:rgba(0,0,0,.68);
+  backdrop-filter:blur(10px);
+}
+.backend-modal[hidden]{display:none}
+.backend-modal-card{
+  width:min(680px,100%);
+  padding:clamp(22px,4vw,34px);
+  border:1px solid var(--border);
+  border-radius:24px;
+  background:var(--surface);
+  box-shadow:0 24px 80px rgba(0,0,0,.35);
+}
+.backend-modal-head{
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+  align-items:flex-start;
+  margin-bottom:18px;
+}
+.backend-modal-head h3{font-size:clamp(24px,4vw,34px);margin:5px 0 0}
+.backend-modal-card p{color:var(--muted);line-height:1.65}
+.backend-url-row{display:flex;gap:10px;margin:22px 0 12px}
+.backend-url-row input{
+  flex:1;
+  min-width:0;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px 16px;
+  background:var(--bg);
+  color:var(--text);
+  outline:none;
+}
+.backend-url-row input:focus{border-color:var(--gold)}
+.primary-btn{
+  border:0;
+  border-radius:14px;
+  padding:14px 18px;
+  background:var(--gold);
+  color:#111;
+  font-weight:800;
+  cursor:pointer;
+}
+.backend-modal-card small{color:var(--muted);line-height:1.5}
+.backend-modal-card code{color:var(--gold)}
+@media(max-width:700px){
+  .connect-btn{font-size:12px;padding:9px 11px}
+  .backend-url-row{flex-direction:column}
+}
