@@ -9,7 +9,7 @@ load_dotenv()
 
 from routes.news import news_bp
 from services.database import init_db
-from services.refresher import refresh_news, refresh_news_async
+from services.refresher import refresh_news
 
 
 def create_app():
@@ -33,10 +33,6 @@ def start_scheduler():
 
 
 scheduler = start_scheduler()
-
-# Warm the news cache without delaying Gunicorn/Railway readiness.
-# The HTTP server can become healthy immediately while feeds load behind it.
-refresh_news_async()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))

@@ -195,6 +195,7 @@ html[data-theme="light"] .moon-icon { display: block; }
 .card-btn svg { width:16px; height:16px; }
 .card-btn.saved .bookmark-path { fill:currentColor; }
 
+}
 @keyframes spin { to { transform:rotate(360deg); } }
 .icon-btn.loading svg { animation:spin .8s linear infinite; }
 

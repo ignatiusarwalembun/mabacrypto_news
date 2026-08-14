@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from .analyzer import analyze_batch
 from .database import existing_ids, upsert_news
-from .news_collector import collect_news, get_collector_state
+from .news_collector import collect_news
 
 _lock = threading.Lock()
 _state = {
@@ -26,11 +26,6 @@ def refresh_news():
             "last_error": None,
         })
         items = collect_news()
-        collector = get_collector_state()
-        if not items and collector.get("requests_succeeded", 0) == 0:
-            errors = collector.get("errors") or []
-            _state["last_error"] = errors[-1] if errors else "All news feed requests failed."
-
         known = existing_ids([item["id"] for item in items])
         new_items = [item for item in items if item["id"] not in known]
 
@@ -54,17 +49,3 @@ def refresh_news():
 
 def get_refresh_state():
     return dict(_state)
-
-
-def refresh_news_async():
-    """Start a refresh in the background and return immediately."""
-    if _state.get("running"):
-        return {**_state, "message": "Refresh already running"}
-
-    thread = threading.Thread(
-        target=refresh_news,
-        name="mabacrypto-news-refresh",
-        daemon=True,
-    )
-    thread.start()
-    return {**_state, "message": "Refresh started in background"}

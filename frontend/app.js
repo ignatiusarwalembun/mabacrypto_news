@@ -1,4 +1,5 @@
-const API = window.APP_CONFIG?.API_BASE_URL || "/api";
+const API = window.APP_CONFIG?.API_BASE_URL || "http://localhost:5000/api";
+
 const state = {
   view: "home",
   category: "all",
@@ -6,8 +7,6 @@ const state = {
   search: "",
   items: [],
   debounce: null,
-  startupPollTimer: null,
-  startupPollAttempts: 0,
 };
 
 const els = {
@@ -132,45 +131,21 @@ function buildQuery() {
   return params;
 }
 
-async function loadNews({ startupPoll = false } = {}) {
+async function loadNews() {
   updateSectionText();
-  els.resultCount.textContent = startupPoll ? "Mengambil berita…" : "Memuat berita…";
-  els.empty.hidden = true;
-
   try {
-    const response = await fetch(`${API}/news?${buildQuery().toString()}`, {
-      cache: "no-store",
-    });
+    const response = await fetch(`${API}/news?${buildQuery().toString()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
     const data = await response.json();
     state.items = data.items || [];
     updateHeader(data.stats || {});
     renderNews();
-
-    const refreshRunning = Boolean(data.refresh?.running);
-    const databaseEmpty = Number(data.stats?.total || 0) === 0;
-
-    clearTimeout(state.startupPollTimer);
-
-    if (databaseEmpty && refreshRunning && state.startupPollAttempts < 20) {
-      state.startupPollAttempts += 1;
-      els.resultCount.textContent = "Mengambil berita terbaru…";
-      els.empty.hidden = true;
-      state.startupPollTimer = setTimeout(
-        () => loadNews({ startupPoll: true }),
-        1500
-      );
-    } else {
-      state.startupPollAttempts = 0;
-    }
   } catch (error) {
-    clearTimeout(state.startupPollTimer);
-    state.startupPollAttempts = 0;
     state.items = [];
     renderNews();
-    showToast("Backend belum terhubung.");
+    showToast("Backend belum terhubung. Jalankan backend Flask dulu.");
     console.error(error);
+  } finally {
   }
 }
 
@@ -206,8 +181,6 @@ async function toggleSave(id) {
 }
 
 async function refreshNews() {
-  clearTimeout(state.startupPollTimer);
-  state.startupPollAttempts = 0;
   els.refresh.classList.add("loading");
   try {
     const response = await fetch(`${API}/refresh`, { method: "POST" });
@@ -224,8 +197,6 @@ async function refreshNews() {
 }
 
 function setView(view) {
-  clearTimeout(state.startupPollTimer);
-  state.startupPollAttempts = 0;
   state.view = view;
   if (["investment", "technology", "crypto", "important", "saved"].includes(view)) {
     state.category = "all";
@@ -238,7 +209,7 @@ function setView(view) {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  localStorage.setItem("mabacrypto-news-theme", theme);
+  localStorage.setItem("mabacrypto-theme", theme);
   document.querySelector('meta[name="theme-color"]').setAttribute("content", theme === "dark" ? "#080808" : "#f6f4ee");
 }
 
@@ -259,5 +230,5 @@ els.search.addEventListener("input", () => {
 els.refresh.addEventListener("click", refreshNews);
 els.theme.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 
-applyTheme(localStorage.getItem("mabacrypto-news-theme") || "dark");
+applyTheme(localStorage.getItem("mabacrypto-theme") || localStorage.getItem("aurum-theme") || "dark");
 loadNews();
