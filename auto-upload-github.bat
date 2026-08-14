@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title MABACRYPTO NEWS - GitHub Uploader v1.5.4
+title MABACRYPTO NEWS - GitHub Uploader v1.5.5
 
 cd /d "%~dp0"
 
@@ -11,7 +11,7 @@ set "DEFAULT_COMMIT=Update mabacrypto_news"
 echo.
 echo ============================================
 echo   MABACRYPTO NEWS - AUTO GITHUB UPLOADER
-echo   VERSION 1.5.4
+echo   VERSION 1.5.5
 echo ============================================
 echo.
 
@@ -126,7 +126,7 @@ if not errorlevel 1 (
     git merge-base --is-ancestor origin/%BRANCH% HEAD >nul 2>&1
     if errorlevel 1 (
         echo [INFO] Riwayat GitHub berbeda. Menghubungkan riwayat dan mempertahankan isi project lokal...
-        git merge -s ours origin/%BRANCH% -m "Sync GitHub history with local mabacrypto_news"
+        git merge -s ours origin/%BRANCH% --allow-unrelated-histories -m "Sync GitHub history with local mabacrypto_news"
         if errorlevel 1 goto :error
     ) else (
         echo [INFO] Riwayat lokal sudah mencakup GitHub.
@@ -142,7 +142,7 @@ if errorlevel 1 goto :error
 echo.
 echo ============================================
 echo   SUCCESS - PROJECT SUDAH DIUPLOAD
-echo   VERSION 1.5.4
+echo   VERSION 1.5.5
 echo ============================================
 echo https://github.com/ignatiusarwalembun/mabacrypto_news
 echo.
@@ -153,7 +153,7 @@ exit /b 0
 echo.
 echo ============================================
 echo   GAGAL MENJALANKAN GIT COMMAND
-echo   VERSION 1.5.4
+echo   VERSION 1.5.5
 echo ============================================
 echo Lihat pesan Git tepat di atas.
 echo.
