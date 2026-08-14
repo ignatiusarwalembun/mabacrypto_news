@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#080808" />
+  <title>Aurum News Intelligence</title>
+  <meta name="description" content="Dashboard berita investasi, teknologi, blockchain, dan crypto dengan terjemahan serta importance scoring." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Aurum News Intelligence">
+        <span class="brand-mark">A</span>
+        <span class="brand-copy">
+          <strong>AURUM</strong>
+          <small>NEWS INTELLIGENCE</small>
+        </span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Navigasi utama">
+        <button class="nav-link active" data-view="home">Beranda</button>
+        <button class="nav-link" data-view="investment">Investasi</button>
+        <button class="nav-link" data-view="technology">Teknologi</button>
+        <button class="nav-link" data-view="crypto">Blockchain & Crypto</button>
+        <button class="nav-link" data-view="important">Penting</button>
+        <button class="nav-link" data-view="saved">Tersimpan</button>
+      </nav>
+
+      <div class="top-actions">
+        <button id="refreshBtn" class="icon-btn" aria-label="Perbarui berita" title="Perbarui berita">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.9-4L3 9m0 0V4m0 5h5m-4 4a8.1 8.1 0 0 0 14.9 4L21 15m0 0v5m0-5h-5"/></svg>
+        </button>
+        <button id="themeBtn" class="icon-btn" aria-label="Ganti tema" title="Ganti tema">
+          <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero section-wrap">
+        <div class="hero-copy">
+          <span class="eyebrow">MARKET • TECHNOLOGY • BLOCKCHAIN • CRYPTO</span>
+          <h1>Berita yang layak<br><span>diperhatikan.</span></h1>
+          <p>Investasi, perkembangan teknologi, blockchain, dan crypto—diterjemahkan, diringkas, lalu diprioritaskan agar lu bisa fokus ke hal yang benar-benar penting.</p>
+        </div>
+
+        <div class="hero-status glass-card">
+          <div class="status-topline">
+            <span class="live-dot"></span>
+            <span>News monitor aktif</span>
+          </div>
+          <div class="status-number" id="totalNews">0</div>
+          <span class="status-label">artikel terindeks</span>
+          <div class="status-divider"></div>
+          <div class="status-mini-grid">
+            <div><strong id="importantCount">0</strong><span>Penting</span></div>
+            <div><strong id="techCount">0</strong><span>Teknologi</span></div>
+            <div><strong id="investCount">0</strong><span>Investasi</span></div>
+            <div><strong id="cryptoCount">0</strong><span>Crypto</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="controls section-wrap" aria-label="Filter berita">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="searchInput" type="search" placeholder="Cari perusahaan, teknologi, saham, Bitcoin..." autocomplete="off" />
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-group" id="categoryFilters">
+            <button class="filter-chip active" data-category="all">Semua</button>
+            <button class="filter-chip" data-category="investment">Investasi</button>
+            <button class="filter-chip" data-category="technology">Teknologi</button>
+            <button class="filter-chip" data-category="crypto">Blockchain & Crypto</button>
+          </div>
+
+          <select id="sourceSelect" class="source-select" aria-label="Pilih sumber berita">
+            <option value="all">Semua sumber</option>
+            <option value="Bloomberg">Bloomberg</option>
+            <option value="Kontan">Kontan</option>
+            <option value="Google News">Google News</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="news-section section-wrap">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker" id="sectionKicker">LATEST SIGNALS</span>
+            <h2 id="sectionTitle">Berita terbaru</h2>
+          </div>
+          <span class="result-count" id="resultCount">0 berita</span>
+        </div>
+
+        <div id="loadingState" class="news-grid" aria-live="polite">
+          <article class="skeleton-card"></article>
+          <article class="skeleton-card"></article>
+          <article class="skeleton-card"></article>
+        </div>
+
+        <div id="newsGrid" class="news-grid" hidden></div>
+
+        <div id="emptyState" class="empty-state" hidden>
+          <div class="empty-icon">A</div>
+          <h3>Belum ada berita di sini.</h3>
+          <p>Coba ganti filter atau tekan tombol refresh di kanan atas.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer section-wrap">
+      <span>AURUM NEWS INTELLIGENCE</span>
+      <span>Bloomberg • Google News • Kontan</span>
+    </footer>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Navigasi mobile">
+    <button class="mobile-nav-item active" data-view="home">
+      <svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="mobile-nav-item" data-view="investment">
+      <svg viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg>
+      <span>Investasi</span>
+    </button>
+    <button class="mobile-nav-item" data-view="technology">
+      <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 9h6v6H9zM9 1v4m6-4v4M9 19v4m6-4v4M1 9h4m-4 6h4m14-6h4m-4 6h4"/></svg>
+      <span>Teknologi</span>
+    </button>
+    <button class="mobile-nav-item" data-view="crypto">
+      <svg viewBox="0 0 24 24"><path d="M9 3h4.5a3.5 3.5 0 0 1 0 7H9m0 0h5.5a3.5 3.5 0 0 1 0 7H9m3-14v18m-3-3h8M7 6h2m-2 11h2"/></svg>
+      <span>Crypto</span>
+    </button>
+    <button class="mobile-nav-item" data-view="important">
+      <svg viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v4m0 3h.01"/></svg>
+      <span>Penting</span>
+    </button>
+    <button class="mobile-nav-item" data-view="saved">
+      <svg viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg>
+      <span>Simpan</span>
+    </button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
