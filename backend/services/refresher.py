@@ -49,3 +49,17 @@ def refresh_news():
 
 def get_refresh_state():
     return dict(_state)
+
+
+def refresh_news_async():
+    """Start a refresh in the background and return immediately."""
+    if _state.get("running"):
+        return {**_state, "message": "Refresh already running"}
+
+    thread = threading.Thread(
+        target=refresh_news,
+        name="mabacrypto-news-refresh",
+        daemon=True,
+    )
+    thread.start()
+    return {**_state, "message": "Refresh started in background"}

@@ -2,6 +2,7 @@ import hashlib
 import html
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus
@@ -98,42 +99,64 @@ def make_id(title, url):
     return hashlib.sha256(seed).hexdigest()[:24]
 
 
+def _fetch_feed(feed):
+    """Fetch and parse one feed. Network failures return an empty list."""
+    url = GOOGLE_NEWS_RSS.format(query=quote_plus(feed["query"]))
+    try:
+        response = requests.get(
+            url,
+            timeout=(3.5, 8),
+            headers={"User-Agent": "MabaCryptoNews/1.0 (+news-dashboard)"},
+        )
+        response.raise_for_status()
+        parsed = feedparser.parse(response.content)
+    except requests.RequestException:
+        return []
+
+    items = []
+    for entry in parsed.entries[:MAX_ITEMS]:
+        raw_title = clean_html(entry.get("title", "Untitled"))
+        title = normalize_title(raw_title)
+        if not title:
+            continue
+
+        link = entry.get("link", "")
+        summary = clean_html(entry.get("summary", ""))
+        publisher = publisher_from_entry(entry)
+        items.append({
+            "id": make_id(title, link),
+            "title_original": title,
+            "summary_original": summary,
+            "url": link,
+            "source": feed["source"],
+            "publisher": publisher,
+            "category": feed["category"],
+            "published_at": parse_date(entry),
+        })
+    return items
+
+
 def collect_news():
+    """Collect feeds concurrently so refresh time is bounded by slow feeds, not their sum."""
     collected = []
     seen_titles = set()
 
-    for feed in FEEDS:
-        url = GOOGLE_NEWS_RSS.format(query=quote_plus(feed["query"]))
-        try:
-            response = requests.get(
-                url,
-                timeout=15,
-                headers={"User-Agent": "MabaCryptoNews/1.0 (+news-dashboard)"},
-            )
-            response.raise_for_status()
-            parsed = feedparser.parse(response.content)
-        except requests.RequestException:
-            continue
-        for entry in parsed.entries[:MAX_ITEMS]:
-            raw_title = clean_html(entry.get("title", "Untitled"))
-            title = normalize_title(raw_title)
-            dedupe_key = re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
-            if not title or dedupe_key in seen_titles:
-                continue
-            seen_titles.add(dedupe_key)
+    workers = min(6, len(FEEDS))
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="news-feed") as executor:
+        futures = [executor.submit(_fetch_feed, feed) for feed in FEEDS]
 
-            link = entry.get("link", "")
-            summary = clean_html(entry.get("summary", ""))
-            publisher = publisher_from_entry(entry)
-            collected.append({
-                "id": make_id(title, link),
-                "title_original": title,
-                "summary_original": summary,
-                "url": link,
-                "source": feed["source"],
-                "publisher": publisher,
-                "category": feed["category"],
-                "published_at": parse_date(entry),
-            })
+        for future in as_completed(futures):
+            try:
+                items = future.result()
+            except Exception:
+                continue
+
+            for item in items:
+                title = item["title_original"]
+                dedupe_key = re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
+                if dedupe_key in seen_titles:
+                    continue
+                seen_titles.add(dedupe_key)
+                collected.append(item)
 
     return collected
