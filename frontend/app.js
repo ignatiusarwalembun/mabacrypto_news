@@ -5,11 +5,13 @@ function normalizeApiBase(value) {
 }
 
 function resolveApiBase() {
-  const saved = localStorage.getItem("mabacrypto-api-base");
-  if (saved) return normalizeApiBase(saved);
-
+  // Production config is the source of truth so every device connects automatically.
   const configured = window.APP_CONFIG?.API_BASE_URL;
   if (configured) return normalizeApiBase(configured);
+
+  // Optional per-device override is only a fallback when no production URL is configured.
+  const saved = localStorage.getItem("mabacrypto-api-base");
+  if (saved) return normalizeApiBase(saved);
 
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1" || window.location.protocol === "file:") {
@@ -116,7 +118,6 @@ function cardTemplate(item) {
     </article>`;
 }
 
-
 function showToast(message) {
   els.toast.textContent = message;
   els.toast.classList.add("show");
@@ -158,14 +159,13 @@ function buildQuery() {
   return params;
 }
 
-
 function setBackendStatus(mode, message) {
   els.backendStatus.textContent = message;
   els.backendDot.dataset.state = mode;
 }
 
 function openBackendModal() {
-  const current = localStorage.getItem("mabacrypto-api-base") || window.APP_CONFIG?.API_BASE_URL || "";
+  const current = window.APP_CONFIG?.API_BASE_URL || localStorage.getItem("mabacrypto-api-base") || "";
   els.backendUrlInput.value = current.replace(/\/api\/?$/, "");
   els.backendModal.hidden = false;
   setTimeout(() => els.backendUrlInput.focus(), 0);
@@ -230,7 +230,7 @@ async function loadNews() {
     setBackendStatus("offline", "Backend tidak terhubung");
     els.empty.hidden = false;
     els.empty.querySelector("h3").textContent = "Berita belum bisa dimuat.";
-    els.empty.querySelector("p").textContent = "Cek URL Railway lewat tombol “Hubungkan Backend”, lalu pastikan /api/health bisa dibuka.";
+    els.empty.querySelector("p").textContent = "Backend production belum merespons. Coba refresh halaman beberapa saat lagi.";
     showToast("Frontend belum bisa terhubung ke backend Railway.");
     console.error(error);
   }
@@ -329,17 +329,17 @@ els.saveBackendUrl.addEventListener("click", async () => {
     return;
   }
   localStorage.setItem("mabacrypto-api-base", raw);
-  API = normalizeApiBase(raw);
+  // Manual URL remains available as a fallback, but production config is authoritative.
+  API = normalizeApiBase(window.APP_CONFIG?.API_BASE_URL || raw);
   closeBackendModal();
   const ok = await testBackend();
   if (ok) {
     showToast("Backend Railway berhasil terhubung.");
     await loadNews();
   } else {
-    showToast("URL tersimpan, tapi backend belum merespons.");
+    showToast("Backend belum merespons.");
   }
 });
-
 
 applyTheme(localStorage.getItem("mabacrypto-theme") || localStorage.getItem("aurum-theme") || "dark");
 loadNews();
