@@ -1,5 +1,8 @@
-const API = window.APP_CONFIG?.API_BASE_URL || "/api";
+const API = window.APP_CONFIG?.API_BASE_URL;
 
+if (!API) {
+  throw new Error("API_BASE_URL belum dikonfigurasi. Set RAILWAY_API_URL di Netlify lalu redeploy.");
+}
 const state = {
   view: "home",
   category: "all",

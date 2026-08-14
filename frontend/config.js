@@ -1,6 +1,5 @@
-// Production-safe API routing.
-// Browser always talks to the same Netlify origin.
-// Netlify Function forwards /api/* to Railway.
+// Netlify replaces this file during deployment via build-config.js.
+// For local testing, put your backend URL here if needed.
 window.APP_CONFIG = {
-  API_BASE_URL: "/api"
+  API_BASE_URL: "http://localhost:5000/api"
 };
