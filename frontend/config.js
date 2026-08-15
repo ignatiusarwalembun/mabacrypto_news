@@ -2,7 +2,7 @@
   "use strict";
 
   const isLocal = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
-  const PRODUCTION_API_BASE_URL = "https://YOUR-RAILWAY-DOMAIN.up.railway.app/api";
+  const PRODUCTION_API_BASE_URL = "https://mabacryptonews-production-d8d7.up.railway.app/api";
   const LOCAL_API_BASE_URL = "http://localhost:5000/api";
 
   // Production uses this shared config file on every browser/device.
