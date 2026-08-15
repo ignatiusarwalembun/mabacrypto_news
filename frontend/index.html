@@ -1,41 +1,52 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="MabaCrypto News — berita investasi, teknologi, blockchain, dan cryptocurrency.">
   <title>MabaCrypto News</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#" data-nav="HOME" aria-label="MabaCrypto News Home">
-      <span class="brand-mark">M</span>
-      <span>MabaCrypto News</span>
-    </a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#" data-nav="home" aria-label="MabaCrypto News Home">
+        <span class="brand-mark" aria-hidden="true">M</span>
+        <span>MabaCrypto News</span>
+      </a>
 
-    <nav class="desktop-nav" aria-label="Navigasi utama">
-      <button class="nav-btn active" data-nav="HOME">HOME</button>
-      <button class="nav-btn" data-nav="INVESTASI">INVESTASI</button>
-      <button class="nav-btn" data-nav="TEKNOLOGI">TEKNOLOGI</button>
-      <button class="nav-btn" data-nav="BLOCKCHAIN & CRYPTO">BLOCKCHAIN & CRYPTO</button>
-      <button class="nav-btn" data-nav="PENTING">PENTING</button>
-      <button class="nav-btn" data-nav="TERSIMPAN">TERSIMPAN</button>
-    </nav>
+      <nav class="desktop-nav" aria-label="Navigasi utama">
+        <button class="nav-link active" data-nav="home">HOME</button>
+        <button class="nav-link" data-nav="investment">INVESTASI</button>
+        <button class="nav-link" data-nav="technology">TEKNOLOGI</button>
+        <button class="nav-link" data-nav="crypto">BLOCKCHAIN &amp; CRYPTO</button>
+        <button class="nav-link" data-nav="important">PENTING</button>
+        <button class="nav-link" data-nav="saved">TERSIMPAN</button>
+      </nav>
 
-    <div class="top-actions">
-      <button id="themeToggle" class="icon-btn" type="button" aria-label="Ganti tema">☾</button>
-      <button id="mobileMenuButton" class="menu-btn" type="button" aria-expanded="false" aria-controls="mobileMenu">MENU</button>
+      <div class="header-actions">
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Ganti tema">☼</button>
+        <button id="menuButton" class="icon-button mobile-only" type="button" aria-label="Buka menu" aria-expanded="false">☰</button>
+      </div>
     </div>
   </header>
 
-  <div id="mobileMenu" class="mobile-menu" hidden>
-    <button class="mobile-nav-btn active" data-nav="HOME">HOME</button>
-    <button class="mobile-nav-btn" data-nav="INVESTASI">INVESTASI</button>
-    <button class="mobile-nav-btn" data-nav="TEKNOLOGI">TEKNOLOGI</button>
-    <button class="mobile-nav-btn" data-nav="BLOCKCHAIN & CRYPTO">BLOCKCHAIN & CRYPTO</button>
-    <button class="mobile-nav-btn" data-nav="PENTING">PENTING</button>
-    <button class="mobile-nav-btn" data-nav="TERSIMPAN">TERSIMPAN</button>
+  <div id="mobileMenu" class="mobile-menu" aria-hidden="true">
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-top">
+        <strong>MabaCrypto News</strong>
+        <button id="menuClose" class="icon-button" type="button" aria-label="Tutup menu">×</button>
+      </div>
+      <nav class="mobile-nav" aria-label="Navigasi mobile">
+        <button class="mobile-nav-link active" data-nav="home">HOME</button>
+        <button class="mobile-nav-link" data-nav="investment">INVESTASI</button>
+        <button class="mobile-nav-link" data-nav="technology">TEKNOLOGI</button>
+        <button class="mobile-nav-link" data-nav="crypto">BLOCKCHAIN &amp; CRYPTO</button>
+        <button class="mobile-nav-link" data-nav="important">PENTING</button>
+        <button class="mobile-nav-link" data-nav="saved">TERSIMPAN</button>
+      </nav>
+    </div>
   </div>
 
   <main class="page-shell">
@@ -43,14 +54,11 @@
       <div>
         <p class="eyebrow">MARKET • TECH • CRYPTO</p>
         <h1>MabaCrypto News</h1>
-        <p class="hero-copy">Berita investasi, teknologi, blockchain, dan cryptocurrency dalam satu tempat.</p>
+        <p class="hero-copy">Berita terbaru yang rapi, cepat dibaca, dan tetap mengarah ke sumber asli.</p>
       </div>
-      <div class="status-panel" aria-live="polite">
-        <span id="statusDot" class="status-dot status-checking"></span>
-        <div>
-          <strong id="backendStatus">MEMERIKSA BACKEND</strong>
-          <span id="statusDetail">Menghubungkan ke API...</span>
-        </div>
+      <div class="status-area">
+        <span id="backendStatus" class="status-pill status-neutral">MENGAMBIL BERITA</span>
+        <button id="refreshButton" class="refresh-button" type="button">Refresh</button>
       </div>
     </section>
 
@@ -59,27 +67,27 @@
       <article class="stat-card"><span>Berita penting</span><strong id="statImportant">0</strong></article>
       <article class="stat-card"><span>Technology</span><strong id="statTechnology">0</strong></article>
       <article class="stat-card"><span>Investment</span><strong id="statInvestment">0</strong></article>
-      <article class="stat-card"><span>Blockchain & Crypto</span><strong id="statCrypto">0</strong></article>
+      <article class="stat-card"><span>Blockchain &amp; Crypto</span><strong id="statCrypto">0</strong></article>
     </section>
 
     <section class="controls" aria-label="Pencarian dan filter">
-      <label class="search-wrap">
-        <span class="sr-only">Cari berita</span>
-        <input id="searchInput" type="search" placeholder="Cari judul, ringkasan, atau publisher..." autocomplete="off">
+      <label class="search-box">
+        <span aria-hidden="true">⌕</span>
+        <input id="searchInput" type="search" placeholder="Cari berita, publisher, atau topik..." autocomplete="off">
       </label>
 
       <div class="filter-row">
-        <div class="filter-chips" aria-label="Filter kategori">
-          <button class="chip active" data-category="SEMUA">SEMUA</button>
-          <button class="chip" data-category="Investment">INVESTASI</button>
-          <button class="chip" data-category="Technology">TEKNOLOGI</button>
-          <button class="chip" data-category="Blockchain & Crypto">BLOCKCHAIN & CRYPTO</button>
+        <div class="filter-group" aria-label="Filter kategori">
+          <button class="filter-chip active" data-category="all">SEMUA</button>
+          <button class="filter-chip" data-category="Investment">INVESTASI</button>
+          <button class="filter-chip" data-category="Technology">TEKNOLOGI</button>
+          <button class="filter-chip" data-category="Blockchain & Crypto">BLOCKCHAIN &amp; CRYPTO</button>
         </div>
 
         <label class="source-select-wrap">
           <span class="sr-only">Filter sumber</span>
           <select id="sourceFilter">
-            <option value="SEMUA">SEMUA SUMBER</option>
+            <option value="all">SEMUA SUMBER</option>
             <option value="BLOOMBERG">BLOOMBERG</option>
             <option value="KONTAN">KONTAN</option>
             <option value="GOOGLE NEWS">GOOGLE NEWS</option>
@@ -88,47 +96,22 @@
       </div>
     </section>
 
-    <section class="news-section">
+    <section class="feed-section">
       <div class="section-heading">
         <div>
-          <p class="eyebrow" id="viewEyebrow">LATEST</p>
-          <h2 id="viewTitle">Berita Terbaru</h2>
+          <p class="eyebrow">LIVE FEED</p>
+          <h2 id="viewTitle">Berita terbaru</h2>
         </div>
         <span id="resultCount" class="result-count">0 berita</span>
       </div>
 
-      <div id="loadingMessage" class="loading-message" hidden>Mengambil berita...</div>
-      <div id="errorMessage" class="error-message" hidden></div>
-      <div id="emptyMessage" class="empty-message" hidden>Belum ada berita yang cocok.</div>
-      <div id="newsGrid" class="news-grid"></div>
+      <div id="messageBox" class="message-box" hidden></div>
+      <div id="loadingText" class="loading-text">Mengambil berita...</div>
+      <div id="newsList" class="news-list" aria-live="polite"></div>
     </section>
   </main>
 
-  <template id="newsCardTemplate">
-    <article class="news-card">
-      <div class="card-topline">
-        <div class="source-stack">
-          <span class="source-label"></span>
-          <span class="publisher-label"></span>
-        </div>
-        <span class="importance-badge"></span>
-      </div>
-      <div class="meta-row">
-        <span class="category-label"></span>
-        <span class="published-label"></span>
-      </div>
-      <h3 class="news-title"></h3>
-      <p class="news-summary"></p>
-      <div class="score-row">
-        <span>Importance</span>
-        <strong class="score-value"></strong>
-      </div>
-      <div class="card-actions">
-        <button class="save-btn" type="button"></button>
-        <a class="source-link" target="_blank" rel="noopener noreferrer">BUKA SUMBER ↗</a>
-      </div>
-    </article>
-  </template>
+  <footer class="site-footer">MabaCrypto News</footer>
 
   <script src="./config.js"></script>
   <script src="./app.js"></script>

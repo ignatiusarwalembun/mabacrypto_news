@@ -1,327 +1,328 @@
-(() => {
+(function () {
   "use strict";
 
-  const config = window.APP_CONFIG || {};
-  const isLocal = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
-  const API_BASE = (isLocal ? config.LOCAL_API_BASE_URL : config.API_BASE_URL || "").replace(/\/$/, "");
-
+  const config = window.APP_CONFIG;
   const state = {
     allNews: [],
-    stats: {},
-    refresh: {},
-    nav: "HOME",
-    category: "SEMUA",
-    source: "SEMUA",
-    search: "",
-    initialRefreshAttempted: false,
+    stats: { total: 0, important: 0, technology: 0, investment: 0, crypto: 0 },
+    view: "home",
+    category: "all",
+    source: "all",
+    query: "",
+    loading: true,
+    refresh: null
   };
 
-  const el = {
-    newsGrid: document.getElementById("newsGrid"),
-    loading: document.getElementById("loadingMessage"),
-    error: document.getElementById("errorMessage"),
-    empty: document.getElementById("emptyMessage"),
-    statusDot: document.getElementById("statusDot"),
+  const els = {
+    newsList: document.getElementById("newsList"),
+    loadingText: document.getElementById("loadingText"),
+    messageBox: document.getElementById("messageBox"),
     backendStatus: document.getElementById("backendStatus"),
-    statusDetail: document.getElementById("statusDetail"),
-    search: document.getElementById("searchInput"),
-    source: document.getElementById("sourceFilter"),
-    resultCount: document.getElementById("resultCount"),
+    refreshButton: document.getElementById("refreshButton"),
+    searchInput: document.getElementById("searchInput"),
+    sourceFilter: document.getElementById("sourceFilter"),
     viewTitle: document.getElementById("viewTitle"),
-    viewEyebrow: document.getElementById("viewEyebrow"),
-    template: document.getElementById("newsCardTemplate"),
-    mobileMenu: document.getElementById("mobileMenu"),
-    mobileMenuButton: document.getElementById("mobileMenuButton"),
-    themeToggle: document.getElementById("themeToggle"),
+    resultCount: document.getElementById("resultCount"),
     statTotal: document.getElementById("statTotal"),
     statImportant: document.getElementById("statImportant"),
     statTechnology: document.getElementById("statTechnology"),
     statInvestment: document.getElementById("statInvestment"),
     statCrypto: document.getElementById("statCrypto"),
+    themeToggle: document.getElementById("themeToggle"),
+    menuButton: document.getElementById("menuButton"),
+    menuClose: document.getElementById("menuClose"),
+    mobileMenu: document.getElementById("mobileMenu")
   };
 
-  function api(path) {
-    if (!API_BASE) throw new Error("API_BASE_URL belum dikonfigurasi.");
-    return `${API_BASE}${path}`;
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
-  function setStatus(kind, title, detail) {
-    el.statusDot.className = `status-dot status-${kind}`;
-    el.backendStatus.textContent = title;
-    el.statusDetail.textContent = detail;
-  }
-
-  async function request(path, options = {}) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 25000);
+  function validUrl(value) {
     try {
-      const response = await fetch(api(path), {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          ...(options.headers || {}),
-        },
+      const url = new URL(value);
+      return ["http:", "https:"].includes(url.protocol) ? url.href : "#";
+    } catch (_) {
+      return "#";
+    }
+  }
+
+  function formatDate(value) {
+    try {
+      const date = new Date(value);
+      return new Intl.DateTimeFormat("id-ID", {
+        dateStyle: "medium",
+        timeStyle: "short"
+      }).format(date);
+    } catch (_) {
+      return value || "Waktu tidak tersedia";
+    }
+  }
+
+  function setStatus(label, type) {
+    els.backendStatus.textContent = label;
+    els.backendStatus.className = `status-pill status-${type}`;
+  }
+
+  function showMessage(text) {
+    els.messageBox.hidden = !text;
+    els.messageBox.textContent = text || "";
+  }
+
+  function renderStats() {
+    els.statTotal.textContent = state.stats.total || 0;
+    els.statImportant.textContent = state.stats.important || 0;
+    els.statTechnology.textContent = state.stats.technology || 0;
+    els.statInvestment.textContent = state.stats.investment || 0;
+    els.statCrypto.textContent = state.stats.crypto || 0;
+  }
+
+  function deriveStatus(refresh) {
+    if (!refresh) {
+      setStatus("BACKEND AKTIF", "good");
+      return;
+    }
+    const sourceValues = Object.values(refresh.sources || {});
+    const failed = sourceValues.some((item) => !item.ok);
+    if (failed || refresh.partial_failure) setStatus("FEED BERMASALAH", "warn");
+    else setStatus("BACKEND AKTIF", "good");
+  }
+
+  async function loadNews({ quiet = false } = {}) {
+    state.loading = true;
+    if (!quiet) {
+      els.loadingText.hidden = false;
+      els.loadingText.textContent = "Mengambil berita...";
+      setStatus("MENGAMBIL BERITA", "neutral");
+    }
+    showMessage("");
+
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/news?limit=500`, {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.error || "API error");
+
+      state.allNews = Array.isArray(data.news) ? data.news : [];
+      state.stats = data.stats || state.stats;
+      state.refresh = data.refresh || null;
+      renderStats();
+      deriveStatus(state.refresh);
+      render();
+    } catch (error) {
+      setStatus("BACKEND TIDAK TERHUBUNG", "bad");
+      showMessage("Backend MabaCrypto News sedang tidak tersedia.");
+      state.allNews = [];
+      render();
+    } finally {
+      state.loading = false;
+      els.loadingText.hidden = true;
+    }
+  }
+
+  async function refreshNews() {
+    els.refreshButton.disabled = true;
+    els.refreshButton.textContent = "Mengambil...";
+    setStatus("MENGAMBIL BERITA", "neutral");
+    showMessage("");
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/refresh`, {
+        method: "POST",
+        headers: { Accept: "application/json" }
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.error || data.message || `HTTP ${response.status}`);
-      }
-      return data;
+      if (!response.ok && !data.refresh) throw new Error(data.error || `HTTP ${response.status}`);
+      state.refresh = data.refresh || null;
+      await loadNews({ quiet: true });
+      deriveStatus(state.refresh);
+    } catch (_) {
+      setStatus("BACKEND TIDAK TERHUBUNG", "bad");
+      showMessage("Backend MabaCrypto News sedang tidak tersedia.");
     } finally {
-      clearTimeout(timeout);
+      els.refreshButton.disabled = false;
+      els.refreshButton.textContent = "Refresh";
     }
   }
 
-  async function checkHealth() {
-    setStatus("checking", "MEMERIKSA BACKEND", "Menghubungkan ke API...");
-    try {
-      const data = await request("/health", { timeoutMs: 9000 });
-      if (!data.ok) throw new Error("Healthcheck tidak valid.");
-      setStatus("active", "BACKEND AKTIF", "API MabaCrypto News terhubung.");
-      return true;
-    } catch (error) {
-      setStatus("error", "BACKEND TIDAK TERHUBUNG", "Backend MabaCrypto News sedang tidak tersedia.");
-      showError(`Backend MabaCrypto News sedang tidak tersedia. ${error.message}`);
-      return false;
-    }
-  }
-
-  function showLoading(show) {
-    el.loading.hidden = !show;
-  }
-
-  function showError(message = "") {
-    el.error.textContent = message;
-    el.error.hidden = !message;
-  }
-
-  function formatDate(iso) {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return "Waktu tidak tersedia";
-    return new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  }
-
-  function currentNews() {
-    const query = state.search.trim().toLowerCase();
+  function filteredNews() {
+    const query = state.query.trim().toLowerCase();
     return state.allNews.filter((item) => {
-      if (state.nav === "INVESTASI" && item.category !== "Investment") return false;
-      if (state.nav === "TEKNOLOGI" && item.category !== "Technology") return false;
-      if (state.nav === "BLOCKCHAIN & CRYPTO" && item.category !== "Blockchain & Crypto") return false;
-      if (state.nav === "PENTING" && Number(item.importance_score) < 70) return false;
-      if (state.nav === "TERSIMPAN" && !item.saved) return false;
-      if (state.category !== "SEMUA" && item.category !== state.category) return false;
-      if (state.source !== "SEMUA" && item.source !== state.source) return false;
+      if (state.view === "saved" && !item.saved) return false;
+      if (state.view === "important" && Number(item.importance_score) < 70) return false;
+      if (state.category !== "all" && item.category !== state.category) return false;
+      if (state.source !== "all" && item.source !== state.source) return false;
       if (query) {
-        const haystack = `${item.title} ${item.summary} ${item.publisher}`.toLowerCase();
+        const haystack = [item.title, item.summary, item.publisher, item.source, item.category]
+          .join(" ")
+          .toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
     });
   }
 
-  function updateViewHeading() {
-    const map = {
-      HOME: ["LATEST", "Berita Terbaru"],
-      INVESTASI: ["CATEGORY", "Investasi"],
-      TEKNOLOGI: ["CATEGORY", "Teknologi"],
-      "BLOCKCHAIN & CRYPTO": ["CATEGORY", "Blockchain & Crypto"],
-      PENTING: ["PRIORITY", "Berita Penting"],
-      TERSIMPAN: ["SAVED", "Berita Tersimpan"],
+  function cardClass(item) {
+    const score = Number(item.importance_score || 0);
+    if (score >= 85) return "news-card critical";
+    if (score >= 70) return "news-card important";
+    return "news-card";
+  }
+
+  function renderCard(item) {
+    const safeLink = validUrl(item.original_url);
+    return `
+      <article class="${cardClass(item)}" data-news-id="${Number(item.id)}">
+        <div class="card-top">
+          <div class="meta-chips">
+            <span class="meta-chip">${escapeHtml(item.category)}</span>
+            <span class="meta-chip">${escapeHtml(item.source)}</span>
+            <span class="meta-chip score">${escapeHtml(item.importance_level)} · ${Number(item.importance_score)}/100</span>
+          </div>
+          <button class="save-button ${item.saved ? "saved" : ""}" type="button" data-save-id="${Number(item.id)}" aria-pressed="${Boolean(item.saved)}">
+            ${item.saved ? "TERSIMPAN" : "SIMPAN"}
+          </button>
+        </div>
+        <h3 class="news-title">${escapeHtml(item.title)}</h3>
+        <p class="news-summary">${escapeHtml(item.summary)}</p>
+        <div class="card-footer">
+          <div class="publisher-line">${escapeHtml(item.publisher)} · ${escapeHtml(formatDate(item.published_at))}${item.translated ? " · Terjemahan Indonesia" : ""}</div>
+          <a class="original-link" href="${escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer">BUKA SUMBER →</a>
+        </div>
+      </article>`;
+  }
+
+  function render() {
+    const items = filteredNews();
+    els.resultCount.textContent = `${items.length} berita`;
+    const titles = {
+      home: "Berita terbaru",
+      investment: "Berita investasi",
+      technology: "Berita teknologi",
+      crypto: "Blockchain & Crypto",
+      important: "Berita penting",
+      saved: "Berita tersimpan"
     };
-    const [eyebrow, title] = map[state.nav] || map.HOME;
-    el.viewEyebrow.textContent = eyebrow;
-    el.viewTitle.textContent = title;
-  }
+    els.viewTitle.textContent = titles[state.view] || "Berita terbaru";
 
-  function updateStats(stats = {}) {
-    el.statTotal.textContent = stats.total || 0;
-    el.statImportant.textContent = stats.important || 0;
-    el.statTechnology.textContent = stats.technology || 0;
-    el.statInvestment.textContent = stats.investment || 0;
-    el.statCrypto.textContent = stats.crypto || 0;
-  }
-
-  function applyRefreshStatus(refresh = {}) {
-    const errors = refresh.source_errors || {};
-    const errorCount = Object.keys(errors).length;
-    if (refresh.running) {
-      setStatus("loading", "MENGAMBIL BERITA", "Backend sedang memperbarui feed.");
-    } else if (errorCount > 0) {
-      setStatus("loading", "FEED BERMASALAH", `${errorCount} feed bermasalah; feed lain tetap digunakan.`);
-    } else {
-      setStatus("active", "BACKEND AKTIF", "API terhubung dan siap digunakan.");
+    if (!items.length && !state.loading) {
+      els.newsList.innerHTML = `<div class="empty-state">Tidak ada berita yang cocok dengan filter ini.</div>`;
+      return;
     }
+    els.newsList.innerHTML = items.map(renderCard).join("");
   }
 
-  function renderNews() {
-    const items = currentNews();
-    el.newsGrid.replaceChildren();
-    el.resultCount.textContent = `${items.length} berita`;
-    el.empty.hidden = items.length !== 0;
-    updateViewHeading();
-
-    for (const item of items) {
-      const fragment = el.template.content.cloneNode(true);
-      const card = fragment.querySelector(".news-card");
-      const level = item.importance_level || "NORMAL";
-      if (level === "PENTING") card.classList.add("level-important");
-      if (level === "SANGAT PENTING") card.classList.add("level-critical");
-
-      fragment.querySelector(".source-label").textContent = item.source;
-      fragment.querySelector(".publisher-label").textContent = item.publisher;
-      fragment.querySelector(".importance-badge").textContent = level;
-      fragment.querySelector(".category-label").textContent = item.category;
-      fragment.querySelector(".published-label").textContent = formatDate(item.published_at);
-      fragment.querySelector(".news-title").textContent = item.title;
-      fragment.querySelector(".news-summary").textContent = item.summary;
-      fragment.querySelector(".score-value").textContent = `${item.importance_score}/100`;
-
-      const saveButton = fragment.querySelector(".save-btn");
-      saveButton.textContent = item.saved ? "TERSIMPAN" : "SIMPAN";
-      saveButton.classList.toggle("saved", Boolean(item.saved));
-      saveButton.addEventListener("click", () => toggleSaved(item.id, !item.saved, saveButton));
-
-      const link = fragment.querySelector(".source-link");
-      link.href = item.original_url;
-
-      el.newsGrid.appendChild(fragment);
-    }
-  }
-
-  async function loadNews({ refreshIfEmpty = false } = {}) {
-    showError("");
-    showLoading(true);
+  async function toggleSaved(id) {
+    const item = state.allNews.find((entry) => Number(entry.id) === Number(id));
+    if (!item) return;
+    const next = !item.saved;
     try {
-      const data = await request("/news");
-      state.allNews = Array.isArray(data.news) ? data.news : [];
-      state.stats = data.stats || {};
-      state.refresh = data.refresh || {};
-      updateStats(state.stats);
-      applyRefreshStatus(state.refresh);
-      renderNews();
-
-      if (refreshIfEmpty && state.allNews.length === 0 && !state.initialRefreshAttempted) {
-        state.initialRefreshAttempted = true;
-        await refreshNews();
-      }
-    } catch (error) {
-      setStatus("error", "BACKEND TIDAK TERHUBUNG", "Backend MabaCrypto News sedang tidak tersedia.");
-      showError(`Backend MabaCrypto News sedang tidak tersedia. ${error.message}`);
-    } finally {
-      showLoading(false);
-    }
-  }
-
-  async function refreshNews() {
-    setStatus("loading", "MENGAMBIL BERITA", "Mengambil berita terbaru...");
-    showLoading(true);
-    try {
-      await request("/refresh", { method: "POST", body: "{}", timeoutMs: 120000 });
-      await loadNews({ refreshIfEmpty: false });
-    } catch (error) {
-      showError(`Feed bermasalah. ${error.message}`);
-      setStatus("loading", "FEED BERMASALAH", "Sebagian atau seluruh feed gagal diperbarui.");
-    } finally {
-      showLoading(false);
-    }
-  }
-
-  async function toggleSaved(id, nextValue, button) {
-    button.disabled = true;
-    try {
-      const data = await request(`/news/${id}/saved`, {
+      const response = await fetch(`${config.API_BASE_URL}/news/${id}/saved`, {
         method: "PATCH",
-        body: JSON.stringify({ saved: nextValue }),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ saved: next })
       });
-      const index = state.allNews.findIndex((item) => item.id === id);
-      if (index >= 0) state.allNews[index] = data.news;
-      renderNews();
-    } catch (error) {
-      showError(`Gagal menyimpan berita. ${error.message}`);
-    } finally {
-      button.disabled = false;
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      item.saved = next;
+      render();
+    } catch (_) {
+      showMessage("Status berita tersimpan gagal diperbarui. Coba lagi.");
     }
   }
 
-  function setNav(nav) {
-    state.nav = nav;
+  function setView(view) {
+    state.view = view;
+    const categoryMap = {
+      home: "all",
+      investment: "Investment",
+      technology: "Technology",
+      crypto: "Blockchain & Crypto",
+      important: "all",
+      saved: "all"
+    };
+    state.category = categoryMap[view] || "all";
+
     document.querySelectorAll("[data-nav]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.nav === nav);
+      button.classList.toggle("active", button.dataset.nav === view);
     });
-    el.mobileMenu.hidden = true;
-    el.mobileMenuButton.setAttribute("aria-expanded", "false");
-    renderNews();
-  }
-
-  function setCategory(category) {
-    state.category = category;
     document.querySelectorAll("[data-category]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.category === category);
+      button.classList.toggle("active", button.dataset.category === state.category);
     });
-    renderNews();
+    closeMenu();
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function initTheme() {
-    const saved = localStorage.getItem("mabacrypto_theme") || "dark";
-    document.documentElement.dataset.theme = saved;
-    el.themeToggle.textContent = saved === "light" ? "☀" : "☾";
+  function openMenu() {
+    els.mobileMenu.classList.add("open");
+    els.mobileMenu.setAttribute("aria-hidden", "false");
+    els.menuButton.setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
   }
 
-  function toggleTheme() {
-    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem("mabacrypto_theme", next);
-    el.themeToggle.textContent = next === "light" ? "☀" : "☾";
+  function closeMenu() {
+    els.mobileMenu.classList.remove("open");
+    els.mobileMenu.setAttribute("aria-hidden", "true");
+    els.menuButton.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
   }
 
-  function bindEvents() {
-    document.querySelectorAll("[data-nav]").forEach((button) => {
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        setNav(button.dataset.nav);
-      });
-    });
-
-    document.querySelectorAll("[data-category]").forEach((button) => {
-      button.addEventListener("click", () => setCategory(button.dataset.category));
-    });
-
-    let searchTimer;
-    el.search.addEventListener("input", () => {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => {
-        state.search = el.search.value;
-        renderNews();
-      }, 120);
-    });
-
-    el.source.addEventListener("change", () => {
-      state.source = el.source.value;
-      renderNews();
-    });
-
-    el.mobileMenuButton.addEventListener("click", () => {
-      const isOpen = !el.mobileMenu.hidden;
-      el.mobileMenu.hidden = isOpen;
-      el.mobileMenuButton.setAttribute("aria-expanded", String(!isOpen));
-    });
-
-    el.themeToggle.addEventListener("click", toggleTheme);
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("mabacrypto_theme", theme);
+    els.themeToggle.textContent = theme === "dark" ? "☼" : "☾";
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", theme === "dark" ? "#090909" : "#f5f2e9");
   }
 
-  async function init() {
-    initTheme();
-    bindEvents();
-    const healthy = await checkHealth();
-    if (healthy) await loadNews({ refreshIfEmpty: true });
-  }
+  document.addEventListener("click", (event) => {
+    const nav = event.target.closest("[data-nav]");
+    if (nav) {
+      event.preventDefault();
+      setView(nav.dataset.nav);
+      return;
+    }
+    const category = event.target.closest("[data-category]");
+    if (category) {
+      state.category = category.dataset.category;
+      state.view = "home";
+      document.querySelectorAll("[data-category]").forEach((button) => button.classList.toggle("active", button === category));
+      document.querySelectorAll("[data-nav]").forEach((button) => button.classList.toggle("active", button.dataset.nav === "home"));
+      render();
+      return;
+    }
+    const save = event.target.closest("[data-save-id]");
+    if (save) toggleSaved(save.dataset.saveId);
+  });
 
-  init();
+  els.searchInput.addEventListener("input", (event) => {
+    state.query = event.target.value || "";
+    render();
+  });
+  els.sourceFilter.addEventListener("change", (event) => {
+    state.source = event.target.value;
+    render();
+  });
+  els.refreshButton.addEventListener("click", refreshNews);
+  els.themeToggle.addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+  });
+  els.menuButton.addEventListener("click", openMenu);
+  els.menuClose.addEventListener("click", closeMenu);
+  els.mobileMenu.addEventListener("click", (event) => {
+    if (event.target === els.mobileMenu) closeMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
+  });
+
+  applyTheme(localStorage.getItem("mabacrypto_theme") || "dark");
+  loadNews();
 })();

@@ -1,57 +1,96 @@
+import json
 from flask import Blueprint, jsonify, request
 
-from database import get_stats, list_news, update_saved
-from services.news_service import get_refresh_state, refresh_news
+from services.database import get_state, news_stats, query_news, set_saved
 
 news_bp = Blueprint("news", __name__)
 
+VALID_CATEGORIES = {"Investment", "Technology", "Blockchain & Crypto"}
+VALID_SOURCES = {"BLOOMBERG", "KONTAN", "GOOGLE NEWS"}
 
-def parse_bool(value):
-    if value is None:
+
+def serialize_row(row):
+    return {
+        "id": row["id"],
+        "title": row["title_id"] or row["title_original"],
+        "summary": row["summary_id"] or row["summary_original"],
+        "title_original": row["title_original"],
+        "summary_original": row["summary_original"],
+        "translated": bool(row["title_id"] or row["summary_id"]),
+        "language": row["language"],
+        "publisher": row["publisher"],
+        "source": row["source"],
+        "category": row["category"],
+        "published_at": row["published_at"],
+        "original_url": row["original_url"],
+        "importance_score": row["importance_score"],
+        "importance_level": row["importance_level"],
+        "saved": bool(row["saved"]),
+    }
+
+
+def refresh_state():
+    state = get_state("last_refresh")
+    if not state:
         return None
-    return str(value).lower() in {"1", "true", "yes", "on"}
+    try:
+        data = json.loads(state["value"])
+        data["state_updated_at"] = state["updated_at"]
+        return data
+    except Exception:
+        return None
 
 
 @news_bp.get("/news")
 def get_news():
-    items = list_news(
-        category=request.args.get("category") or None,
-        source=request.args.get("source") or None,
-        saved=parse_bool(request.args.get("saved")),
-        important=parse_bool(request.args.get("important")),
-        search=(request.args.get("search") or "").strip() or None,
-        limit=request.args.get("limit", default=250, type=int) or 250,
-    )
-    for item in items:
-        item["saved"] = bool(item["saved"])
-        item["translated"] = bool(item["translated"])
-    return jsonify(
-        {
-            "ok": True,
-            "news": items,
-            "stats": get_stats(),
-            "refresh": get_refresh_state(),
-        }
-    )
+    category = request.args.get("category", "").strip() or None
+    source = request.args.get("source", "").strip().upper() or None
+    important = request.args.get("important", "").lower() in {"1", "true", "yes"}
+    saved = request.args.get("saved", "").lower() in {"1", "true", "yes"}
+
+    if category and category not in VALID_CATEGORIES:
+        return jsonify({"ok": False, "error": "Kategori tidak valid."}), 400
+    if source and source not in VALID_SOURCES:
+        return jsonify({"ok": False, "error": "Sumber tidak valid."}), 400
+
+    try:
+        limit = min(500, max(1, int(request.args.get("limit", "250"))))
+    except ValueError:
+        limit = 250
+
+    try:
+        rows = query_news(category, source, important, saved, limit)
+        return jsonify(
+            {
+                "ok": True,
+                "news": [serialize_row(row) for row in rows],
+                "stats": news_stats(),
+                "refresh": refresh_state(),
+            }
+        )
+    except Exception:
+        return jsonify({"ok": False, "error": "Database berita sedang tidak tersedia."}), 503
 
 
 @news_bp.post("/refresh")
-def refresh():
-    result = refresh_news()
-    status = 200 if result.get("ok", False) or result.get("already_running") else 502
-    return jsonify(result), status
+def manual_refresh():
+    try:
+        from services.feeds import refresh_news
+        result = refresh_news()
+        status = 200 if result.get("ok") else 503
+        return jsonify({"ok": result.get("ok", False), "refresh": result}), status
+    except Exception as exc:
+        return jsonify({"ok": False, "error": "Refresh berita gagal.", "detail": str(exc)[:200]}), 503
 
 
 @news_bp.patch("/news/<int:news_id>/saved")
-def patch_saved(news_id: int):
-    body = request.get_json(silent=True) or {}
-    if "saved" not in body or not isinstance(body["saved"], bool):
-        return jsonify({"ok": False, "error": "Field 'saved' harus boolean."}), 400
-
-    item = update_saved(news_id, body["saved"])
-    if item is None:
-        return jsonify({"ok": False, "error": "Berita tidak ditemukan."}), 404
-
-    item["saved"] = bool(item["saved"])
-    item["translated"] = bool(item["translated"])
-    return jsonify({"ok": True, "news": item})
+def update_saved(news_id: int):
+    payload = request.get_json(silent=True) or {}
+    if "saved" not in payload or not isinstance(payload["saved"], bool):
+        return jsonify({"ok": False, "error": "Field saved harus true atau false."}), 400
+    try:
+        if not set_saved(news_id, payload["saved"]):
+            return jsonify({"ok": False, "error": "Berita tidak ditemukan."}), 404
+        return jsonify({"ok": True, "id": news_id, "saved": payload["saved"]})
+    except Exception:
+        return jsonify({"ok": False, "error": "Gagal menyimpan perubahan."}), 503

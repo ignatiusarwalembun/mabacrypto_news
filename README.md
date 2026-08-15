@@ -1,6 +1,8 @@
 # MabaCrypto News
 
-MabaCrypto News adalah web aggregator berita untuk **Investment**, **Technology**, dan **Blockchain & Crypto** dengan frontend HTML/CSS/Vanilla JavaScript serta backend Flask + SQLite.
+Agregator berita **Investment**, **Technology**, dan **Blockchain & Crypto** dengan frontend Vanilla HTML/CSS/JS dan backend Flask + SQLite.
+
+Tidak memakai OpenAI API, ChatGPT API, Claude API, Gemini API, atau AI API lain. Importance score murni rule-based. Translation memakai library gratis, berjalan fail-soft di background, dan selalu fallback ke teks asli jika gagal.
 
 ## Struktur
 
@@ -13,14 +15,15 @@ mabacrypto_news/
 │   └── config.js
 ├── backend/
 │   ├── app.py
-│   ├── database.py
 │   ├── requirements.txt
 │   ├── Procfile
 │   ├── routes/
 │   ├── services/
 │   └── data/
+├── requirements.txt       # pointer untuk deteksi Railpack
 ├── railway.toml
 ├── netlify.toml
+├── set-production-api.bat
 ├── auto-upload-github.bat
 ├── .gitignore
 └── README.md
@@ -28,113 +31,80 @@ mabacrypto_news/
 
 ## Environment backend
 
-| Variable | Default | Production recommendation |
+| Variable | Default | Production |
 |---|---|---|
-| `PORT` | `5000` | Railway mengisi otomatis |
-| `DATABASE_PATH` | `backend/data/news.db` | `/app/data/news.db` dengan Railway Volume di `/app/data` |
+| `DATABASE_PATH` | `backend/data/news.db` | `/app/data/news.db` dengan Railway Volume mount `/app/data` |
 | `NEWS_REFRESH_MINUTES` | `20` | `20` |
-| `CORS_ORIGINS` | `*` | Domain Netlify, atau `*` selama pengujian |
-| `DISABLE_SCHEDULER` | `0` | `0` |
-| `LOG_LEVEL` | `INFO` | `INFO` |
+| `CORS_ORIGINS` | `*` | Domain Netlify, atau `*` saat tes awal |
+| `ENABLE_SCHEDULER` | `true` | `true` |
+| `TRANSLATION_ENABLED` | `true` | `true` |
+| `PORT` | `5000` local | otomatis dari Railway |
 
 ---
 
-# A. TEST LOCAL
+## A. TEST LOCAL
 
-### 1. Jalankan backend
+1. Buka Terminal / Command Prompt.
+2. Masuk ke folder backend:
+   ```bat
+   cd backend
+   ```
+3. Buat virtual environment:
+   ```bat
+   py -m venv .venv
+   .venv\Scripts\activate
+   ```
+4. Install dependency:
+   ```bat
+   pip install -r requirements.txt
+   ```
+5. Jalankan backend:
+   ```bat
+   python app.py
+   ```
+6. Buka `http://localhost:5000/api/health`.
+7. Hasil wajib:
+   ```json
+   {"ok": true, "service": "MabaCrypto News API"}
+   ```
+8. Buka terminal kedua dari folder project dan jalankan frontend sederhana:
+   ```bat
+   py -m http.server 8080 --directory frontend
+   ```
+9. Buka `http://localhost:8080`.
+10. Klik **Refresh** sekali untuk mengambil berita sekarang. Background refresh selanjutnya berjalan sesuai `NEWS_REFRESH_MINUTES`.
 
-Buka terminal di folder project:
+Jika salah satu feed gagal, sumber lain tetap diproses. Jika translation gagal, artikel tetap muncul dengan teks asli.
 
-```bat
-cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
-```
+## B. UPLOAD GITHUB
 
-Test di browser:
+1. Pastikan Git for Windows terinstall dan login GitHub siap.
+2. Double-click `auto-upload-github.bat`.
+3. Script akan scan semua file, memakai remote `main` sebagai baseline tanpa `git pull --rebase`, mempertahankan snapshot folder lokal sebagai versi terbaru, commit, lalu push ke:
+   `https://github.com/ignatiusarwalembun/mabacrypto_news.git`
 
-```text
-http://localhost:5000/api/health
-```
+## C. DEPLOY RAILWAY
 
-Harus menghasilkan JSON dengan `"ok": true`.
+1. Di Railway, buat project dari repository GitHub tersebut.
+2. Service memakai `railway.toml` di root, jadi start command sudah disiapkan.
+3. Tambahkan Railway Volume dan mount ke:
+   ```text
+   /app/data
+   ```
+4. Tambahkan variables:
+   ```text
+   DATABASE_PATH=/app/data/news.db
+   NEWS_REFRESH_MINUTES=20
+   CORS_ORIGINS=*
+   ENABLE_SCHEDULER=true
+   TRANSLATION_ENABLED=true
+   ```
+5. Generate public Railway domain.
+6. Deploy.
 
-Test root:
+Railway menggunakan healthcheck `/api/health`. Jangan lanjut ke Netlify sebelum langkah D sukses.
 
-```text
-http://localhost:5000/
-```
-
-### 2. Jalankan frontend lokal
-
-Buka terminal kedua dari folder project:
-
-```bat
-cd frontend
-python -m http.server 8080
-```
-
-Buka:
-
-```text
-http://localhost:8080
-```
-
-Saat hostname adalah `localhost` atau `127.0.0.1`, frontend otomatis memakai `http://localhost:5000/api`.
-
----
-
-# B. UPLOAD GITHUB
-
-Repository target sudah dikunci ke:
-
-```text
-https://github.com/ignatiusarwalembun/mabacrypto_news.git
-```
-
-Cara paling sederhana:
-
-1. Pastikan Git for Windows sudah terpasang dan login GitHub sudah aktif.
-2. Double click `auto-upload-github.bat`.
-3. BAT akan fetch `origin/main`, memakai remote sebagai baseline, mempertahankan snapshot folder lokal sebagai versi terbaru, melakukan `git add -A`, commit, lalu push.
-4. BAT juga mencoba membersihkan state rebase/merge lama sebelum upload.
-
----
-
-# C. DEPLOY RAILWAY
-
-1. Di Railway pilih **New Project → Deploy from GitHub repo**.
-2. Pilih repository `mabacrypto_news`.
-3. Railway membaca `railway.toml` dari root project.
-4. Tambahkan environment variables:
-
-```text
-DATABASE_PATH=/app/data/news.db
-NEWS_REFRESH_MINUTES=20
-CORS_ORIGINS=*
-```
-
-5. Tambahkan Railway Volume dan mount ke:
-
-```text
-/app/data
-```
-
-6. Deploy backend.
-
-Start command sudah disiapkan:
-
-```text
-cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
-```
-
----
-
-# D. TEST RAILWAY /api/health
-
-**Jangan lanjut ke Netlify sebelum tahap ini berhasil.**
+## D. TEST RAILWAY /api/health
 
 Buka:
 
@@ -142,7 +112,7 @@ Buka:
 https://DOMAIN-RAILWAY/api/health
 ```
 
-Harus menghasilkan response seperti:
+**WAJIB** menghasilkan HTTP 200 dan JSON:
 
 ```json
 {
@@ -151,91 +121,98 @@ Harus menghasilkan response seperti:
 }
 ```
 
-Lalu test:
+Lalu tes root:
+
+```text
+https://DOMAIN-RAILWAY/
+```
+
+Harus menampilkan service dan path health.
+
+Setelah health sukses, tes refresh:
+
+```text
+POST https://DOMAIN-RAILWAY/api/refresh
+```
+
+Cara gampang: jalankan dari PowerShell:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "https://DOMAIN-RAILWAY/api/refresh"
+```
+
+Lalu buka:
 
 ```text
 https://DOMAIN-RAILWAY/api/news
 ```
 
-Jika database masih kosong, scheduler akan menjalankan refresh otomatis beberapa detik setelah backend hidup. Frontend juga memicu refresh sekali jika daftar berita masih kosong.
+## E. MASUKKAN DOMAIN RAILWAY KE PRODUCTION CONFIG
 
----
+Tidak perlu edit source code manual.
 
-# E. MASUKKAN DOMAIN RAILWAY KE PRODUCTION CONFIG
+1. Double-click `set-production-api.bat`.
+2. Paste domain Railway, contoh:
+   ```text
+   https://mabacrypto-news-production.up.railway.app
+   ```
+3. Script otomatis mengisi `frontend/config.js` menjadi URL `/api` production yang sama untuk laptop, HP, tablet, incognito, dan browser baru.
 
-`frontend/config.js` saat project ini dibuat sudah berisi:
+`localStorage` hanya optional override untuk debugging dan **bukan** koneksi production utama.
 
-```text
-https://mabacryptonews-production.up.railway.app/api
-```
+## F. PUSH UPDATE
 
-Jika Railway project yang dipakai memang menggunakan domain tersebut, **tidak perlu mengubah source code apa pun**.
-
-Jika Railway memberikan domain baru yang berbeda, ubah hanya nilai `API_BASE_URL` di `frontend/config.js` ke:
-
-```text
-https://DOMAIN-BARU.up.railway.app/api
-```
-
-Frontend production tidak memakai localStorage untuk koneksi backend.
-
----
-
-# F. PUSH UPDATE
-
-Jika domain Railway berubah dan `config.js` telah disesuaikan, double click lagi:
+Double-click lagi:
 
 ```text
 auto-upload-github.bat
 ```
 
+Perubahan production API akan dipush ke GitHub.
+
+## G. DEPLOY NETLIFY
+
+1. Import repository GitHub ke Netlify.
+2. `netlify.toml` di root sudah mengatur:
+   ```text
+   publish = frontend
+   ```
+3. Tidak ada build command.
+4. Deploy site.
+5. Setelah domain Netlify sudah ada, untuk CORS yang lebih ketat ubah Railway variable:
+   ```text
+   CORS_ORIGINS=https://DOMAIN-NETLIFY.netlify.app
+   ```
+   Jika masih tahap tes lintas device, `*` tetap didukung.
+
+## H. TEST LAPTOP
+
+1. Buka domain Netlify di browser baru / incognito.
+2. Pastikan status berubah menjadi `BACKEND AKTIF` atau `FEED BERMASALAH`, bukan `BACKEND TIDAK TERHUBUNG`.
+3. Pastikan berita muncul setelah refresh backend selesai.
+4. Tes search, filter kategori, filter source, menu PENTING, TERSIMPAN, save/unsave, dark/light mode, dan link sumber.
+5. Refresh halaman: saved news tetap tersimpan karena statusnya ada di backend SQLite.
+
+## I. TEST HP
+
+1. Buka domain Netlify dari Android/iPhone tanpa setting tambahan.
+2. Pastikan tidak ada horizontal scrolling.
+3. Buka menu mobile dan tes semua navigasi.
+4. Tes search (Safari tidak boleh auto-zoom karena input minimal 16px).
+5. Tes save berita lalu reload.
+6. Pastikan HP melihat data backend Railway yang sama dengan laptop.
+
 ---
 
-# G. DEPLOY NETLIFY
+## Endpoint
 
-1. Di Netlify pilih **Add new site → Import an existing project**.
-2. Hubungkan GitHub repository `mabacrypto_news`.
-3. `netlify.toml` di root sudah menetapkan publish directory ke `frontend`.
-4. Tidak ada build command karena frontend adalah HTML/CSS/Vanilla JS.
-5. Deploy.
+- `GET /`
+- `GET /api/health`
+- `GET /api/news`
+- `POST /api/refresh`
+- `PATCH /api/news/<id>/saved`
 
----
-
-# H. TEST LAPTOP
-
-Dari laptop:
-
-1. Buka domain Netlify.
-2. Pastikan status menjadi **BACKEND AKTIF**.
-3. Pastikan berita muncul.
-4. Coba filter kategori, source, search, theme, dan save news.
-5. Refresh browser. Saved news tetap tersimpan karena status save berada di SQLite backend.
-
----
-
-# I. TEST HP
-
-Dari HP menggunakan domain Netlify yang sama:
-
-1. Jangan mengatur backend secara manual.
-2. Website otomatis memakai `API_BASE_URL` production dari `config.js`.
-3. Pastikan status **BACKEND AKTIF**.
-4. Pastikan tidak ada horizontal scroll.
-5. Buka menu mobile dan test seluruh navigation.
-6. Test save news dan buka menu **TERSIMPAN**.
-7. Test juga browser incognito untuk memastikan koneksi backend tetap otomatis.
-
-## Endpoint API
-
-```text
-GET   /
-GET   /api/health
-GET   /api/news
-POST  /api/refresh
-PATCH /api/news/:id/saved
-```
-
-Contoh PATCH:
+Contoh save:
 
 ```json
 {
@@ -245,6 +222,8 @@ Contoh PATCH:
 
 ## Catatan sumber berita
 
-Project tidak melakukan bypass paywall dan tidak mengambil full article Bloomberg/Kontan. Google News RSS dipakai sebagai discovery source. Link artikel dicoba didecode ke publisher original menggunakan `googlenewsdecoder`; jika decoding gagal, discovery link Google News tetap dipakai sehingga user masih diarahkan ke artikel publisher melalui Google News.
-
-Translation memakai layanan non-LLM melalui `deep-translator`. Jika translation gagal, artikel tetap disimpan dan teks original menjadi fallback.
+- Bloomberg: memakai RSS publik Bloomberg yang tersedia; bila feed langsung gagal, backend mencoba discovery publik Google News dengan filter domain Bloomberg.
+- Kontan: mencoba RSS publik Kontan; bila feed langsung gagal, backend mencoba discovery publik Google News dengan filter domain Kontan.
+- Google News: memakai RSS search publik sebagai discovery source.
+- Backend tidak mengambil body artikel publisher, tidak bypass paywall, dan tidak memakai browser automation.
+- Sebagian Google News RSS membungkus link dalam redirect `news.google.com`. Backend hanya mencoba mengikuti redirect HTTP biasa; jika Google tidak memberikan redirect langsung, link publik Google News dipertahankan agar browser tetap membawa user ke publisher.

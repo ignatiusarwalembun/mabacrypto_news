@@ -1,108 +1,101 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
+set "TARGET_REPO=https://github.com/ignatiusarwalembun/mabacrypto_news.git"
 
-echo ================================================
-echo  MabaCrypto News - GitHub Auto Upload
-echo ================================================
+echo ==================================================
+echo MabaCrypto News - Auto Upload GitHub
+echo ==================================================
+echo.
 
 where git >nul 2>&1
 if errorlevel 1 (
-  echo [ERROR] Git tidak ditemukan.
-  echo Install Git for Windows lalu jalankan BAT ini lagi.
+  echo ERROR: Git belum terinstall atau tidak ada di PATH.
+  echo Install Git for Windows, lalu jalankan file ini lagi.
   pause
   exit /b 1
 )
 
+rem Bersihkan state operasi Git lama TANPA mengembalikan working tree. Isi folder lokal tetap jadi snapshot terbaru.
+if exist ".git\rebase-merge" git rebase --quit >nul 2>&1
+if exist ".git\rebase-apply" git rebase --quit >nul 2>&1
+if exist ".git\MERGE_HEAD" git merge --quit >nul 2>&1
+if exist ".git\CHERRY_PICK_HEAD" git cherry-pick --quit >nul 2>&1
+if exist ".git\REVERT_HEAD" git revert --quit >nul 2>&1
+
 if not exist ".git" (
-  echo [INFO] Repository Git belum ada. Membuat repository baru...
+  echo Membuat repository Git lokal...
   git init
-  if errorlevel 1 goto :git_error
+  if errorlevel 1 goto :error
 )
 
-rem Bersihkan state merge/rebase lama supaya tidak mengunci repository.
-git rebase --abort >nul 2>&1
-git merge --abort >nul 2>&1
-git cherry-pick --abort >nul 2>&1
-
-set "TARGET_ORIGIN=https://github.com/ignatiusarwalembun/mabacrypto_news.git"
-for /f "delims=" %%i in ('git remote get-url origin 2^>nul') do set "CURRENT_ORIGIN=%%i"
-
-if not defined CURRENT_ORIGIN (
-  echo [INFO] Menambahkan origin...
-  git remote add origin "%TARGET_ORIGIN%"
-) else if /I not "%CURRENT_ORIGIN%"=="%TARGET_ORIGIN%" (
-  echo [INFO] Origin salah. Memperbaiki origin...
-  git remote set-url origin "%TARGET_ORIGIN%"
-)
-
-rem Pastikan identitas commit tersedia di repository ini.
-for /f "delims=" %%i in ('git config user.name 2^>nul') do set "GIT_NAME=%%i"
-if not defined GIT_NAME git config user.name "ignatiusarwalembun"
-for /f "delims=" %%i in ('git config user.email 2^>nul') do set "GIT_EMAIL=%%i"
-if not defined GIT_EMAIL git config user.email "ignatiusarwalembun@users.noreply.github.com"
-
-echo [INFO] Mengambil baseline remote main...
-git fetch origin main
-set "FETCH_RESULT=%ERRORLEVEL%"
-
-rem Nama branch lokal selalu main, tanpa mengubah isi folder kerja.
 git branch -M main >nul 2>&1
 
-rem Jika remote main ada, jadikan itu baseline index/HEAD. --mixed menjaga snapshot
-rem file lokal tetap utuh, jadi folder lokal tetap menjadi versi terbaru.
-git show-ref --verify --quiet refs/remotes/origin/main
-if not errorlevel 1 (
-  git reset --mixed origin/main
-  if errorlevel 1 goto :git_error
+git remote get-url origin >nul 2>&1
+if errorlevel 1 (
+  git remote add origin "%TARGET_REPO%"
 ) else (
-  if not "%FETCH_RESULT%"=="0" echo [INFO] Remote main belum ada atau repository masih kosong.
+  git remote set-url origin "%TARGET_REPO%"
+)
+if errorlevel 1 goto :error
+
+echo Scan semua file lokal...
+git add -A
+if errorlevel 1 goto :error
+
+rem Buat snapshot lokal dulu. Ini menjaga isi folder saat ini sebagai versi yang harus menang.
+git diff --cached --quiet
+if errorlevel 1 (
+  git commit -m "Local snapshot before sync" >nul 2>&1
+  if errorlevel 1 (
+    echo ERROR: Commit gagal. Pastikan Git user.name dan user.email sudah diset.
+    echo Contoh:
+    echo   git config --global user.name "Nama Kamu"
+    echo   git config --global user.email "email@kamu.com"
+    pause
+    exit /b 1
+  )
 )
 
-echo [INFO] Scan semua file lokal...
+echo Mengambil baseline remote main tanpa pull/rebase/merge...
+git fetch origin main >nul 2>&1
+if errorlevel 1 (
+  echo Remote main belum ada atau repository masih kosong. Akan push snapshot lokal sebagai main.
+) else (
+  rem Pindahkan HEAD ke remote main, tetapi pertahankan index + working tree snapshot lokal.
+  git reset --soft origin/main
+  if errorlevel 1 goto :error
+)
+
 git add -A
-if errorlevel 1 goto :git_error
+if errorlevel 1 goto :error
 
 git diff --cached --quiet
-if not errorlevel 1 (
-  echo [OK] Tidak ada perubahan baru untuk di-upload.
+if errorlevel 1 (
+  git commit -m "Update MabaCrypto News"
+  if errorlevel 1 goto :error
+) else (
+  echo Tidak ada perubahan baru dibanding remote main.
+)
+
+echo Push ke GitHub main...
+git push -u origin main
+if errorlevel 1 (
+  echo.
+  echo ERROR: Push ditolak. Kemungkinan remote berubah setelah fetch atau login GitHub belum siap.
+  echo Jalankan file ini sekali lagi. Script tidak menggunakan git pull --rebase atau merge.
   pause
-  exit /b 0
+  exit /b 1
 )
 
-for /f "tokens=1-3 delims=/ " %%a in ("%date%") do set "DATESTAMP=%%a-%%b-%%c"
-set "TIMESTAMP=%time: =0%"
-git commit -m "update MabaCrypto News %DATESTAMP% %TIMESTAMP%"
-if errorlevel 1 goto :git_error
-
-echo [INFO] Push ke GitHub main...
-git push -u origin main
-if not errorlevel 1 goto :success
-
-echo [WARN] Push pertama gagal. Remote mungkin berubah. Mencoba sekali lagi dari baseline terbaru...
-git fetch origin main
-if errorlevel 1 goto :git_error
-git reset --mixed origin/main
-if errorlevel 1 goto :git_error
-git add -A
-git diff --cached --quiet
-if not errorlevel 1 goto :success
-git commit -m "update MabaCrypto News retry %DATESTAMP% %TIMESTAMP%"
-if errorlevel 1 goto :git_error
-git push -u origin main
-if errorlevel 1 goto :git_error
-
-:success
 echo.
-echo [OK] Semua file berhasil di-commit dan push ke GitHub.
-echo Repository: %TARGET_ORIGIN%
+echo SELESAI: Semua file sudah dipush ke:
+echo %TARGET_REPO%
 pause
 exit /b 0
 
-:git_error
+:error
 echo.
-echo [ERROR] Proses Git gagal.
-echo Cek pesan di atas. Pastikan login GitHub/Git Credential Manager aktif
-echo dan koneksi internet tersedia.
+echo ERROR: Proses Git berhenti. Baca pesan di atas, lalu jalankan BAT lagi setelah diperbaiki.
 pause
 exit /b 1

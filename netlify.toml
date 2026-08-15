@@ -1,8 +1,9 @@
 [build]
-publish = "frontend"
+  publish = "frontend"
 
 [[headers]]
-for = "/*"
+  for = "/*"
   [headers.values]
-  X-Content-Type-Options = "nosniff"
-  Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
