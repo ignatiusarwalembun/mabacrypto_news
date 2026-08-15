@@ -227,3 +227,20 @@ Contoh save:
 - Google News: memakai RSS search publik sebagai discovery source.
 - Backend tidak mengambil body artikel publisher, tidak bypass paywall, dan tidak memakai browser automation.
 - Sebagian Google News RSS membungkus link dalam redirect `news.google.com`. Backend hanya mencoba mengikuti redirect HTTP biasa; jika Google tidak memberikan redirect langsung, link publik Google News dipertahankan agar browser tetap membawa user ke publisher.
+
+
+## AUTO RUN LOCAL
+
+Untuk menjalankan backend dan frontend sekaligus di Windows, cukup double-click `auto-run-local.bat` dari root project. Script akan membuat `.venv` bila belum ada, memasang dependency backend bila diperlukan, menjalankan backend di `http://localhost:5000`, frontend di `http://localhost:8080`, lalu membuka browser otomatis.
+
+## Railway configuration (fixed)
+Use these exact Railway service settings:
+- Root Directory: leave EMPTY (repository root)
+- PORT: 8080
+- Target Port for Public Networking: 8080
+- DATABASE_PATH: /app/data/news.db
+- Volume mount path: /app/data
+- Healthcheck: /api/health
+- Start command comes from root railway.toml: `cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120`
+
+Do not set Railway Root Directory to `/backend` while using this root `railway.toml`.
