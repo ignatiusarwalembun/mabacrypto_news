@@ -1,12 +1,12 @@
 import json
 from flask import Blueprint, jsonify, request
 
-from services.database import get_state, news_stats, query_news, set_saved
+from services.database import delete_expired_news, get_state, news_stats, query_news, set_saved
 
 news_bp = Blueprint("news", __name__)
 
 VALID_CATEGORIES = {"Investment", "Technology", "Blockchain & Crypto"}
-VALID_SOURCES = {"BLOOMBERG", "KONTAN", "GOOGLE NEWS"}
+VALID_SOURCES = {"BLOOMBERG", "GOOGLE NEWS"}
 
 
 def serialize_row(row):
@@ -35,6 +35,14 @@ def refresh_state():
         return None
     try:
         data = json.loads(state["value"])
+        if isinstance(data.get("sources"), dict):
+            data["sources"] = {
+                key: value for key, value in data["sources"].items() if key in VALID_SOURCES
+            }
+            data["partial_failure"] = any(
+                isinstance(value, dict) and value.get("ok") is False
+                for value in data["sources"].values()
+            )
         data["state_updated_at"] = state["updated_at"]
         return data
     except Exception:
@@ -59,6 +67,7 @@ def get_news():
         limit = 250
 
     try:
+        delete_expired_news()
         rows = query_news(category, source, important, saved, limit)
         return jsonify(
             {

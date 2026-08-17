@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from datetime import datetime, timedelta, timezone
 from contextlib import contextmanager
 from pathlib import Path
 from threading import Lock
@@ -70,6 +71,8 @@ def init_db() -> None:
             );
             """
         )
+        # Kontan is no longer an active source; remove any records left from older versions.
+        conn.execute("DELETE FROM news WHERE source = 'KONTAN'")
 
 
 def upsert_news(article: dict) -> bool:
@@ -86,45 +89,45 @@ def upsert_news(article: dict) -> bool:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
             ON CONFLICT(fingerprint) DO UPDATE SET
                 title_original = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.title_original
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.title_original
                     ELSE excluded.title_original
                 END,
                 summary_original = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.summary_original
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.summary_original
                     ELSE excluded.summary_original
                 END,
                 title_id = COALESCE(excluded.title_id, news.title_id),
                 summary_id = COALESCE(excluded.summary_id, news.summary_id),
                 language = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.language
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.language
                     ELSE excluded.language
                 END,
                 publisher = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.publisher
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.publisher
                     ELSE excluded.publisher
                 END,
                 source = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.source
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.source
                     ELSE excluded.source
                 END,
                 category = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.category
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.category
                     ELSE excluded.category
                 END,
                 published_at = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.published_at
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.published_at
                     ELSE excluded.published_at
                 END,
                 original_url = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.original_url
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.original_url
                     ELSE excluded.original_url
                 END,
                 importance_score = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.importance_score
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.importance_score
                     ELSE excluded.importance_score
                 END,
                 importance_level = CASE
-                    WHEN news.source IN ('BLOOMBERG', 'KONTAN') AND excluded.source = 'GOOGLE NEWS' THEN news.importance_level
+                    WHEN news.source = 'BLOOMBERG' AND excluded.source = 'GOOGLE NEWS' THEN news.importance_level
                     ELSE excluded.importance_level
                 END,
                 updated_at = excluded.updated_at
@@ -149,6 +152,23 @@ def upsert_news(article: dict) -> bool:
         )
         return existing is None
 
+
+
+def delete_expired_news(retention_days: int | None = None) -> int:
+    """Delete articles older than the retention window based on publication time."""
+    if retention_days is None:
+        try:
+            retention_days = max(1, int(os.getenv("NEWS_RETENTION_DAYS", "10")))
+        except ValueError:
+            retention_days = 10
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat()
+    with _DB_LOCK, connection() as conn:
+        cursor = conn.execute(
+            "DELETE FROM news WHERE datetime(published_at) < datetime(?)",
+            (cutoff,),
+        )
+        return cursor.rowcount
 
 def query_news(category=None, source=None, important=False, saved=False, limit=250):
     clauses = []

@@ -55,6 +55,22 @@
   function formatDate(value) {
     try {
       const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value || "Waktu tidak tersedia";
+
+      const now = new Date();
+      const sameDay = date.getFullYear() === now.getFullYear()
+        && date.getMonth() === now.getMonth()
+        && date.getDate() === now.getDate();
+
+      if (sameDay) {
+        const diffMs = Math.max(0, now.getTime() - date.getTime());
+        const minutes = Math.floor(diffMs / 60000);
+        if (minutes < 1) return "Baru saja";
+        if (minutes < 60) return `${minutes} menit yang lalu`;
+        const hours = Math.floor(minutes / 60);
+        return `${hours} jam yang lalu`;
+      }
+
       return new Intl.DateTimeFormat("id-ID", {
         dateStyle: "medium",
         timeStyle: "short"
@@ -88,8 +104,8 @@
       return;
     }
     const sourceValues = Object.values(refresh.sources || {});
-    const failed = sourceValues.some((item) => !item.ok);
-    if (failed || refresh.partial_failure) setStatus("FEED BERMASALAH", "warn");
+    const failed = sourceValues.length > 0 && sourceValues.some((item) => item && item.ok === false);
+    if (failed) setStatus("FEED BERMASALAH", "warn");
     else setStatus("BACKEND AKTIF", "good");
   }
 
@@ -325,4 +341,7 @@
 
   applyTheme(localStorage.getItem("mabacrypto_theme") || "dark");
   loadNews();
+  window.setInterval(() => {
+    if (!state.loading && state.allNews.length) render();
+  }, 60000);
 })();

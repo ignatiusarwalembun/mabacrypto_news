@@ -10,7 +10,7 @@ from urllib.parse import quote_plus, urlparse
 import feedparser
 import requests
 
-from services.database import set_state, upsert_news
+from services.database import delete_expired_news, set_state, upsert_news
 from services.scoring import score_importance
 from services.translator import detect_language, queue_translation
 
@@ -27,14 +27,6 @@ BLOOMBERG_FEEDS = [
     ("https://feeds.bloomberg.com/crypto/news.rss", "Blockchain & Crypto"),
 ]
 
-KONTAN_FEEDS = [
-    ("https://rss.kontan.co.id/news/keuangan", "Investment"),
-    ("http://rss.kontan.co.id/news/keuangan", "Investment"),
-    ("https://rss.kontan.co.id/news/investasi", "Investment"),
-    ("http://rss.kontan.co.id/news/investasi", "Investment"),
-    ("https://rss.kontan.co.id/news/industri", "Technology"),
-    ("http://rss.kontan.co.id/news/industri", "Technology"),
-]
 
 GOOGLE_NEWS_QUERIES = [
     ("investment OR stocks OR market OR IPO OR inflation OR interest rate when:2d", "Investment"),
@@ -59,7 +51,7 @@ def clean_text(value: str) -> str:
 
 def normalize_title(title: str) -> str:
     normalized = title.lower()
-    normalized = re.sub(r"\s+-\s+(bloomberg|kontan|google news)\s*$", "", normalized)
+    normalized = re.sub(r"\s+-\s+(bloomberg|google news)\s*$", "", normalized)
     normalized = re.sub(r"[^a-z0-9\u00c0-\u024f\u1e00-\u1eff]+", " ", normalized)
     return re.sub(r"\s+", " ", normalized).strip()
 
@@ -224,7 +216,6 @@ def refresh_news() -> dict:
 
     source_groups = {
         "BLOOMBERG": [(url, hint, "Bloomberg") for url, hint in BLOOMBERG_FEEDS],
-        "KONTAN": [(url, hint, "Kontan") for url, hint in KONTAN_FEEDS],
         "GOOGLE NEWS": [(google_news_url(query), hint, "Google News") for query, hint in GOOGLE_NEWS_QUERIES],
     }
 
@@ -240,9 +231,9 @@ def refresh_news() -> dict:
                 logger.warning("Feed failed (%s): %s", url, exc)
                 status["errors"].append(str(exc)[:240])
 
-        # Public Google News discovery fallback for Bloomberg/Kontan if direct RSS is unavailable.
-        if not status["ok"] and source_name in {"BLOOMBERG", "KONTAN"}:
-            domain = "bloomberg.com" if source_name == "BLOOMBERG" else "kontan.co.id"
+        # Public Google News discovery fallback for Bloomberg if direct RSS is unavailable.
+        if not status["ok"] and source_name == "BLOOMBERG":
+            domain = "bloomberg.com"
             fallback_queries = [
                 (f"site:{domain} investment OR market OR economy when:2d", "Investment"),
                 (f"site:{domain} technology OR AI OR semiconductor when:2d", "Technology"),
@@ -252,7 +243,7 @@ def refresh_news() -> dict:
                 try:
                     fetched, inserted = _refresh_feed(
                         google_news_url(query), source_name, hint,
-                        "Bloomberg" if source_name == "BLOOMBERG" else "Kontan",
+                        "Bloomberg",
                     )
                     status["ok"] = True
                     status["fetched"] += fetched
@@ -267,7 +258,12 @@ def refresh_news() -> dict:
     finished = datetime.now(timezone.utc).isoformat()
     results["finished_at"] = finished
     results["ok"] = any(v["ok"] for v in results["sources"].values())
-    results["partial_failure"] = any((not v["ok"]) or bool(v["errors"]) for v in results["sources"].values())
+    results["partial_failure"] = any(not v["ok"] for v in results["sources"].values())
+    try:
+        results["expired_deleted"] = delete_expired_news()
+    except Exception as exc:
+        logger.warning("Could not delete expired news: %s", exc)
+        results["expired_deleted"] = 0
     try:
         import json
 

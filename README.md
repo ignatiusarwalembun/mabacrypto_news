@@ -223,7 +223,6 @@ Contoh save:
 ## Catatan sumber berita
 
 - Bloomberg: memakai RSS publik Bloomberg yang tersedia; bila feed langsung gagal, backend mencoba discovery publik Google News dengan filter domain Bloomberg.
-- Kontan: mencoba RSS publik Kontan; bila feed langsung gagal, backend mencoba discovery publik Google News dengan filter domain Kontan.
 - Google News: memakai RSS search publik sebagai discovery source.
 - Backend tidak mengambil body artikel publisher, tidak bypass paywall, dan tidak memakai browser automation.
 - Sebagian Google News RSS membungkus link dalam redirect `news.google.com`. Backend hanya mencoba mengikuti redirect HTTP biasa; jika Google tidak memberikan redirect langsung, link publik Google News dipertahankan agar browser tetap membawa user ke publisher.
